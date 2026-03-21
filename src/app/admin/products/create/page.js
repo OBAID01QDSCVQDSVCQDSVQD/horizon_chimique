@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { Save, Loader2, ArrowLeft, Upload, FileText, Image as ImageIcon, X } from 'lucide-react';
 import Link from 'next/link';
+import { compressImage } from '@/utils/compressImage';
 
 export default function CreateProductPage() {
     const router = useRouter();
@@ -14,7 +15,7 @@ export default function CreateProductPage() {
 
     const [formData, setFormData] = useState({
         designation: '',
-        gamme: 'Étanchéité Liquide',
+        gamme: [],
         description_courte: '',
         informations: '',
         domaine_application: '',
@@ -44,38 +45,70 @@ export default function CreateProductPage() {
     });
 
     const handleFileUpload = async (e, type) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
 
         const isImage = type === 'image';
         if (isImage) setUploadingImage(true);
         else setUploadingPdf(true);
 
-        const uploadData = new FormData();
-        uploadData.append('file', file);
-
         try {
-            const res = await fetch('/api/upload', {
-                method: 'POST',
-                body: uploadData
-            });
-            const data = await res.json();
+            // Process files: Compress if image, check size for both
+            const processedFilesPromises = files.map(async (file) => {
+                let fileToUpload = file;
 
-            if (data.success) {
-                setFormData(prev => {
-                    if (isImage) {
-                        return { ...prev, images: [...prev.images, data.url] };
-                    } else {
-                        return { ...prev, pdfUrl: data.url };
+                // Compress if image
+                if (isImage) {
+                    try {
+                        // Compress with 0.8 quality, no resizing
+                        fileToUpload = await compressImage(file, 0.8);
+                    } catch (err) {
+                        console.error("Compression failed for", file.name, err);
+                        // If compression fails, try uploading original (or throw?) 
+                        // We'll try original but it might fail size check.
                     }
+                }
+
+                // Check size (Max 10MB)
+                const maxSize = 10 * 1024 * 1024;
+                if (fileToUpload.size > maxSize) {
+                    throw new Error(`Fichier trop lourd : ${file.name} (${(fileToUpload.size / 1024 / 1024).toFixed(2)}MB). Max 10MB.`);
+                }
+
+                return fileToUpload;
+            });
+
+            // Wait for all compressions/checks
+            const processedFiles = await Promise.all(processedFilesPromises);
+
+            // Upload valid files
+            const uploadPromises = processedFiles.map(async (file) => {
+                const uploadData = new FormData();
+                uploadData.append('file', file);
+
+                const res = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: uploadData
                 });
-                toast.success('Fichier téléchargé avec succès !');
-            } else {
-                toast.error(data.error || 'Erreur lors du téléversement');
-            }
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || 'Erreur upload');
+                return data.url;
+            });
+
+            const uploadedUrls = await Promise.all(uploadPromises);
+
+            setFormData(prev => {
+                if (isImage) {
+                    return { ...prev, images: [...prev.images, ...uploadedUrls] };
+                } else {
+                    return { ...prev, pdfUrl: uploadedUrls[0] };
+                }
+            });
+            toast.success('Fichiers téléchargés avec succès !');
+
         } catch (error) {
             console.error(error);
-            toast.error('Erreur serveur lors de l\'envoi');
+            toast.error(error.message || 'Erreur lors du téléversement');
         } finally {
             if (isImage) setUploadingImage(false);
             else setUploadingPdf(false);
@@ -110,8 +143,25 @@ export default function CreateProductPage() {
         }
     };
 
+    const handleCategoryChange = (category) => {
+        setFormData(prev => {
+            const currentGammes = prev.gamme || [];
+            if (currentGammes.includes(category)) {
+                return { ...prev, gamme: currentGammes.filter(c => c !== category) };
+            } else {
+                return { ...prev, gamme: [...currentGammes, category] };
+            }
+        });
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (formData.gamme.length === 0) {
+            toast.error("Veuillez sélectionner au moins une catégorie (Gamme).");
+            return;
+        }
+
         setSubmitting(true);
 
         try {
@@ -165,7 +215,6 @@ export default function CreateProductPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-8">
-
                 {/* --- 1. IDENTIFICATION GÉNÉRALE --- */}
                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                     <div className="bg-slate-50 px-6 py-4 border-b border-slate-200">
@@ -176,11 +225,21 @@ export default function CreateProductPage() {
                             <label className="text-sm font-bold text-slate-700">Désignation (H1) *</label>
                             <input type="text" name="designation" required value={formData.designation} onChange={handleChange} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-lg font-semibold" placeholder="Ex: HORIÉTANCHE" />
                         </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-bold text-slate-700">Gamme / Catégorie *</label>
-                            <select name="gamme" required value={formData.gamme} onChange={handleChange} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-white">
-                                {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                            </select>
+                        <div className="col-span-1 md:col-span-1 space-y-2">
+                            <label className="text-sm font-bold text-slate-700 block mb-2">Gammes / Catégories *</label>
+                            <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 max-h-48 overflow-y-auto space-y-2">
+                                {categories.map(cat => (
+                                    <label key={cat} className="flex items-center gap-3 cursor-pointer hover:bg-slate-100 p-1 rounded transition-colors">
+                                        <input
+                                            type="checkbox"
+                                            checked={formData.gamme.includes(cat)}
+                                            onChange={() => handleCategoryChange(cat)}
+                                            className="w-5 h-5 text-primary rounded border-slate-300 focus:ring-primary"
+                                        />
+                                        <span className="text-slate-700 text-sm font-medium">{cat}</span>
+                                    </label>
+                                ))}
+                            </div>
                         </div>
                         <div className="md:col-span-2 space-y-2">
                             <label className="text-sm font-bold text-slate-700">Description Courte (Intro Header)</label>
@@ -316,7 +375,7 @@ export default function CreateProductPage() {
                                         <>
                                             <ImageIcon className="text-slate-400 mb-2" size={32} />
                                             <span className="text-xs font-bold text-slate-600">Ajouter Image</span>
-                                            <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, 'image')} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                                            <input type="file" accept="image/*" multiple onChange={(e) => handleFileUpload(e, 'image')} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
                                         </>
                                     )}
                                 </div>

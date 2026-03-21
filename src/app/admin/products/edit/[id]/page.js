@@ -5,6 +5,8 @@ import { useRouter, useParams } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { Save, Loader2, ArrowLeft, Upload, FileText, Image as ImageIcon, X } from 'lucide-react';
 import Link from 'next/link';
+import { compressImage } from '@/utils/compressImage';
+import { Reorder } from 'framer-motion';
 
 export default function EditProductPage() {
     const router = useRouter();
@@ -14,9 +16,15 @@ export default function EditProductPage() {
     const [uploadingImage, setUploadingImage] = useState(false);
     const [uploadingPdf, setUploadingPdf] = useState(false);
 
+    // Handle hydration for Reorder component
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
     const [formData, setFormData] = useState({
         designation: '',
-        gamme: 'Étanchéité Liquide',
+        gamme: [], // Array for multiple selection
         description_courte: '',
         informations: '',
         domaine_application: '',
@@ -55,6 +63,7 @@ export default function EditProductPage() {
                     const p = data.data;
                     setFormData({
                         ...p,
+                        gamme: Array.isArray(p.gamme) ? p.gamme : (p.gamme ? [p.gamme] : []),
                         avantages: p.avantages ? p.avantages.join('\n') : '',
                         securite: p.securite ? p.securite.join('\n') : '',
                         images: p.images || [],
@@ -78,38 +87,58 @@ export default function EditProductPage() {
     }, [id, router]);
 
     const handleFileUpload = async (e, type) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
 
         const isImage = type === 'image';
         if (isImage) setUploadingImage(true);
         else setUploadingPdf(true);
 
-        const uploadData = new FormData();
-        uploadData.append('file', file);
-
         try {
-            const res = await fetch('/api/upload', {
-                method: 'POST',
-                body: uploadData
-            });
-            const data = await res.json();
-
-            if (data.success) {
-                setFormData(prev => {
-                    if (isImage) {
-                        return { ...prev, images: [...prev.images, data.url] };
-                    } else {
-                        return { ...prev, pdfUrl: data.url };
+            const processedFilesPromises = files.map(async (file) => {
+                let fileToUpload = file;
+                if (isImage) {
+                    try {
+                        fileToUpload = await compressImage(file, 0.8);
+                    } catch (err) {
+                        console.error("Compression failed for", file.name, err);
                     }
+                }
+                const maxSize = 10 * 1024 * 1024;
+                if (fileToUpload.size > maxSize) {
+                    throw new Error(`Fichier trop lourd : ${file.name} (${(fileToUpload.size / 1024 / 1024).toFixed(2)}MB). Max 10MB.`);
+                }
+                return fileToUpload;
+            });
+
+            const processedFiles = await Promise.all(processedFilesPromises);
+
+            const uploadPromises = processedFiles.map(async (file) => {
+                const uploadData = new FormData();
+                uploadData.append('file', file);
+
+                const res = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: uploadData
                 });
-                toast.success('Fichier téléchargé avec succès !');
-            } else {
-                toast.error(data.error || 'Erreur lors du téléversement');
-            }
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || 'Erreur upload');
+                return data.url;
+            });
+
+            const uploadedUrls = await Promise.all(uploadPromises);
+
+            setFormData(prev => {
+                if (isImage) {
+                    return { ...prev, images: [...prev.images, ...uploadedUrls] };
+                } else {
+                    return { ...prev, pdfUrl: uploadedUrls[0] };
+                }
+            });
+            toast.success('Fichiers téléchargés avec succès !');
         } catch (error) {
             console.error(error);
-            toast.error('Erreur serveur lors de l\'envoi');
+            toast.error(error.message || 'Erreur lors du téléversement');
         } finally {
             if (isImage) setUploadingImage(false);
             else setUploadingPdf(false);
@@ -144,8 +173,24 @@ export default function EditProductPage() {
         }
     };
 
+    const handleCategoryChange = (category) => {
+        setFormData(prev => {
+            const currentGammes = prev.gamme || [];
+            if (currentGammes.includes(category)) {
+                return { ...prev, gamme: currentGammes.filter(c => c !== category) };
+            } else {
+                return { ...prev, gamme: [...currentGammes, category] };
+            }
+        });
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (formData.gamme.length === 0) {
+            toast.error("Veuillez sélectionner au moins une catégorie (Gamme).");
+            return;
+        }
+
         setSubmitting(true);
 
         try {
@@ -215,11 +260,21 @@ export default function EditProductPage() {
                             <label className="text-sm font-bold text-slate-700">Désignation (H1) *</label>
                             <input type="text" name="designation" required value={formData.designation} onChange={handleChange} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-lg font-semibold" />
                         </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-bold text-slate-700">Gamme / Catégorie *</label>
-                            <select name="gamme" required value={formData.gamme} onChange={handleChange} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-white">
-                                {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                            </select>
+                        <div className="col-span-1 md:col-span-1 space-y-2">
+                            <label className="text-sm font-bold text-slate-700 block mb-2">Gammes / Catégories *</label>
+                            <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 max-h-48 overflow-y-auto space-y-2">
+                                {categories.map(cat => (
+                                    <label key={cat} className="flex items-center gap-3 cursor-pointer hover:bg-slate-100 p-1 rounded transition-colors">
+                                        <input
+                                            type="checkbox"
+                                            checked={formData.gamme.includes(cat)}
+                                            onChange={() => handleCategoryChange(cat)}
+                                            className="w-5 h-5 text-primary rounded border-slate-300 focus:ring-primary"
+                                        />
+                                        <span className="text-slate-700 text-sm font-medium">{cat}</span>
+                                    </label>
+                                ))}
+                            </div>
                         </div>
                         <div className="md:col-span-2 space-y-2">
                             <label className="text-sm font-bold text-slate-700">Description Courte (Intro Header)</label>
@@ -342,30 +397,73 @@ export default function EditProductPage() {
                     </div>
                     <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
                         {/* Images */}
-                        <div className="md:col-span-2 space-y-3">
-                            <label className="text-sm font-bold text-slate-700 block">Galerie d'Images</label>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                <div className="relative border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer min-h-[150px]">
-                                    {uploadingImage ? (
-                                        <div className="flex flex-col items-center gap-2 text-primary">
-                                            <Loader2 className="animate-spin" size={24} />
-                                            <span className="text-xs font-medium">Ajout...</span>
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <ImageIcon className="text-slate-400 mb-2" size={32} />
-                                            <span className="text-xs font-bold text-slate-600">Ajouter Image</span>
-                                            <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, 'image')} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                                        </>
-                                    )}
+                        <div className="md:col-span-2 space-y-4">
+                            <div className="flex justify-between items-center">
+                                <label className="text-sm font-bold text-slate-700 block">Galerie d'Images</label>
+                                <div className="relative overflow-hidden cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-xs font-bold transition-colors flex items-center gap-2">
+                                    {uploadingImage ? <Loader2 className="animate-spin" size={16} /> : <Upload size={16} />}
+                                    <span>{uploadingImage ? 'Envoi...' : 'Ajouter des images'}</span>
+                                    <input type="file" accept="image/*" multiple onChange={(e) => handleFileUpload(e, 'image')} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
                                 </div>
-                                {formData.images.map((url, index) => (
-                                    <div key={index} className="relative rounded-lg border border-slate-200 overflow-hidden group min-h-[150px] bg-white">
-                                        <img src={url} alt={`Produit`} className="w-full h-full object-contain p-2" />
-                                        <button type="button" onClick={() => setFormData(prev => ({ ...prev, images: prev.images.filter((_, i) => i !== index) }))} className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"><X size={14} /></button>
-                                    </div>
-                                ))}
                             </div>
+
+                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 min-h-[180px]">
+                                {formData.images.length === 0 ? (
+                                    <div className="h-full flex flex-col items-center justify-center text-slate-400 py-10">
+                                        <ImageIcon size={40} className="mb-2 opacity-50" />
+                                        <p className="text-sm">Aucune image. Ajoutez-en pour commencer.</p>
+                                    </div>
+                                ) : (
+                                    mounted ? (
+                                        <Reorder.Group
+                                            axis="x"
+                                            values={formData.images}
+                                            onReorder={(newOrder) => setFormData(prev => ({ ...prev, images: newOrder }))}
+                                            className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-slate-300"
+                                        >
+                                            {formData.images.map((url) => (
+                                                <Reorder.Item
+                                                    key={url}
+                                                    value={url}
+                                                    className="relative flex-shrink-0 w-40 h-40 bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden group cursor-grab active:cursor-grabbing"
+                                                    whileDrag={{ scale: 1.05 }}
+                                                >
+                                                    <img src={url} alt="Produit" className="w-full h-full object-contain p-2 pointer-events-none select-none" />
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setFormData(prev => ({ ...prev, images: prev.images.filter((imgUrl) => imgUrl !== url) }))
+                                                        }}
+                                                        className="absolute top-2 right-2 bg-white text-red-500 p-1.5 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-red-50"
+                                                    >
+                                                        <X size={14} />
+                                                    </button>
+                                                    <div className="absolute inset-0 ring-2 ring-primary ring-opacity-0 group-active:ring-opacity-100 transition-all pointer-events-none rounded-lg"></div>
+
+                                                    <div className="absolute bottom-2 right-2 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded opacity-0 group-hover:opacity-100 pointer-events-none">
+                                                        Bouger
+                                                    </div>
+                                                </Reorder.Item>
+                                            ))}
+                                        </Reorder.Group>
+                                    ) : (
+                                        <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-slate-300">
+                                            {formData.images.map((url) => (
+                                                <div
+                                                    key={url}
+                                                    className="relative flex-shrink-0 w-40 h-40 bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden"
+                                                >
+                                                    <img src={url} alt="Produit" className="w-full h-full object-contain p-2" />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )
+                                )}
+                            </div>
+                            <p className="text-[10px] text-slate-500 italic text-center">
+                                Maintenez et glissez les images horizontalement pour changer l'ordre.
+                            </p>
                         </div>
                         {/* PDF */}
                         <div className="space-y-3">

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0">
+    <title>Visualiseur Catalogue</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <style>
+        body { margin: 0; padding: 0; background: #f8fafc; font-family: system-ui, -apple-system, sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        #canvas-wrapper { width: 100%; max-width: 1000px; padding: 10px; box-sizing: border-box; flex: 1; overflow: auto; -webkit-overflow-scrolling: touch; display: flex; justify-content: center;}
+        canvas { display: block; width: 100%; height: auto; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); background: white; border-radius: 4px; }
+        #controls { position: fixed; bottom: 20px; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(4px); padding: 8px 16px; border-radius: 9999px; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.05); display: flex; align-items: center; gap: 12px; z-index: 50; border: 1px solid #e2e8f0; transition: opacity 0.3s; }
+        button { background: #2563eb; color: white; border: none; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; transition: background 0.2s; }
+        button:hover { background: #1d4ed8; }
+        button:disabled { background: #cbd5e1; cursor: not-allowed; }
+        #page-info { font-weight: 600; color: #334155; font-size: 14px; tabular-nums: true; min-width: 60px; text-align: center; }
+        #loader { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 10px; color: #64748b; }
+        .spinner { width: 32px; height: 32px; border: 3px solid #e2e8f0; border-top-color: #2563eb; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .hidden { display: none !important; }
+        .error { color: #ef4444; padding: 20px; text-align: center; background: #fef2f2; border-radius: 8px; border: 1px solid #fee2e2; margin: 20px; border-left: 4px solid #ef4444; }
+    </style>
+</head>
+<body>
+    <div id="loader">
+        <div class="spinner"></div>
+        <span>Chargement du catalogue...</span>
+    </div>
+
+    <div id="error-msg" class="hidden error"></div>
+
+    <div id="canvas-wrapper" class="hidden">
+        <canvas id="the-canvas"></canvas>
+    </div>
+
+    <div id="controls" class="hidden">
+        <button id="prev" aria-label="Précédent">←</button>
+        <span id="page-info">1 / 1</span>
+        <button id="next" aria-label="Suivant">→</button>
+    </div>
+
+    <script>
+        // Use local worker to avoid CORS/version issues
+        pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+
+        const urlParams = new URLSearchParams(window.location.search);
+        let url = urlParams.get('file');
+        
+        // Disable Cache explicitly!
+        if(url) {
+            if(url.indexOf('?') > -1) url += '&nocache=' + Date.now();
+            else url += '?nocache=' + Date.now();
+        }
+
+        const canvas = document.getElementById('the-canvas');
+        const ctx = canvas.getContext('2d');
+        let pdfDoc = null;
+        let pageNum = 1;
+        let pageRendering = false;
+        let pageNumPending = null;
+
+        function showError(msg) {
+            document.getElementById('loader').classList.add('hidden');
+            const errDiv = document.getElementById('error-msg');
+            errDiv.innerHTML = `<strong>Impossible d'afficher le PDF</strong><br><small>${msg}</small><br><br><a href="${urlParams.get('file')}" download target="_blank" style="background:#2563eb; color:white; padding:10px 20px; text-decoration:none; border-radius:6px; display:inline-block; font-weight:bold;">📥 Télécharger le fichier</a>`;
+            errDiv.classList.remove('hidden');
+        }
+
+        if (!url) showError("Aucun fichier spécifié");
+        else {
+            const loadingTask = pdfjsLib.getDocument(url);
+            
+            loadingTask.promise.then(doc => {
+                pdfDoc = doc;
+                document.getElementById('page-info').textContent = `${pageNum} / ${pdfDoc.numPages}`;
+                document.getElementById('loader').classList.add('hidden');
+                document.getElementById('canvas-wrapper').classList.remove('hidden');
+                document.getElementById('controls').classList.remove('hidden');
+                renderPage(pageNum);
+            }).catch(error => {
+                console.error(error);
+                showError(error.message);
+            });
+        }
+
+        function renderPage(num) {
+            pageRendering = true;
+            pdfDoc.getPage(num).then(page => {
+                const wrapper = document.getElementById('canvas-wrapper');
+                let viewport = page.getViewport({scale: 1});
+                
+                // Responsive Scaling: Fit Width
+                const desiredWidth = Math.min(wrapper.clientWidth - 20, 1000); 
+                const scale = desiredWidth / viewport.width;
+                viewport = page.getViewport({scale: scale});
+
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+
+                const renderContext = {
+                    canvasContext: ctx,
+                    viewport: viewport
+                };
+                
+                const renderTask = page.render(renderContext);
+
+                renderTask.promise.then(() => {
+                    pageRendering = false;
+                    if (pageNumPending !== null) {
+                        renderPage(pageNumPending);
+                        pageNumPending = null;
+                    }
+                });
+            });
+
+            document.getElementById('page-info').textContent = `${num} / ${pdfDoc.numPages}`;
+            document.getElementById('prev').disabled = num <= 1;
+            document.getElementById('next').disabled = num >= pdfDoc.numPages;
+        }
+
+        function queueRenderPage(num) {
+            if (pageRendering) pageNumPending = num;
+            else renderPage(num);
+        }
+
+        document.getElementById('prev').addEventListener('click', () => {
+            if (pageNum <= 1) return;
+            pageNum--;
+            queueRenderPage(pageNum);
+        });
+
+        document.getElementById('next').addEventListener('click', () => {
+            if (pageNum >= pdfDoc.numPages) return;
+            pageNum++;
+            queueRenderPage(pageNum);
+        });
+
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+             clearTimeout(resizeTimeout);
+             resizeTimeout = setTimeout(() => {
+                 if(pdfDoc) renderPage(pageNum);
+             }, 300);
+        });
+    </script>
+</body>
+</html>

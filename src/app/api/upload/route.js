@@ -22,12 +22,15 @@ export async function POST(request) {
 
         // Upload to Cloudinary
         const result = await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => reject(new Error("Timeout du serveur: Le ficher est trop lourd ou la connexion est lente")), 60000);
+
             cloudinary.uploader.upload_stream(
                 {
                     resource_type: "auto", // Works for images andpdfs
                     folder: "horizon_chimique_products"
                 },
                 (error, result) => {
+                    clearTimeout(timeout);
                     if (error) reject(error);
                     else resolve(result);
                 }

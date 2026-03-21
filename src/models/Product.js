@@ -7,8 +7,8 @@ const ProductSchema = new mongoose.Schema({
         trim: true,
     },
     gamme: {
-        type: String, // Category: Étanchéité Liquide, Adjuvants, etc.
-        required: [true, 'La catégorie est requise'],
+        type: [String], // Category: Étanchéité Liquide, Adjuvants, etc.
+        required: [true, 'Au moins une catégorie est requise'],
         index: true,
     },
     description_courte: {
