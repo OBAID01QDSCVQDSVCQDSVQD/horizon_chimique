@@ -14,6 +14,10 @@ const ChantierSchema = new mongoose.Schema({
         type: String,
         required: [true, 'Le téléphone du client est requis']
     },
+    address: {
+        type: String,
+        required: [false, 'L\'adresse est requise']
+    },
     products: [{
         designation: String,
         quantity: { type: Number, default: 1 }
@@ -29,7 +33,7 @@ const ChantierSchema = new mongoose.Schema({
     },
     invoiceImage: {
         type: String,
-        required: [true, 'La photo de la facture/chantier est requise']
+        required: false
     },
     status: {
         type: String,
@@ -50,6 +54,12 @@ const ChantierSchema = new mongoose.Schema({
     },
     tokenExpiresAt: {
         type: Date
+    },
+    shortCode: {
+        type: String,
+        unique: true,
+        sparse: true,
+        index: true
     },
     clientRating: {
         type: Number,

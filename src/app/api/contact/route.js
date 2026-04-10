@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import Contact from '@/models/Contact';
 import { getServerSession } from 'next-auth'; // Verify if using next-auth
+import { sendSMS } from "@/lib/winsms";
 
 // POST: Human sends message
 export async function POST(req) {
@@ -24,7 +25,34 @@ export async function POST(req) {
             message,
         });
 
-        return NextResponse.json({ success: true, daa: newContact }, { status: 201 });
+        // Envoyer un SMS à l'admin
+        try {
+            const smsMessage = `🚨 Alerte Site: [CONTACT]\nDe: ${name || 'Inconnu'}\nTel: ${phone || 'Non spécifié'}\nSujet: ${subject || 'N/A'}`;
+            // Send to Admin
+            sendSMS('21653520222', smsMessage).catch(e => console.error("Admin SMS Error:", e));
+
+            // Envoyer un SMS de remerciement au client
+            if (phone) {
+                const clientMsg = `Merci pour votre confiance envers SDK Bâtiment !\n\nVotre demande a bien été reçue. Notre équipe va vous recontacter très prochainement.\n\nInfos: 53 520 222`;
+                sendSMS(phone, clientMsg).catch(e => console.error("Client SMS Error:", e));
+            }
+        } catch (smsError) {
+            console.error("Failed to trigger SMS:", smsError);
+        }
+
+        // Send to n8n Webhook asynchronously
+        if (process.env.N8N_WEBHOOK_URL) {
+            fetch(process.env.N8N_WEBHOOK_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    source: 'contact', 
+                    lead: newContact 
+                })
+            }).catch(e => console.error("n8n Webhook failed:", e));
+        }
+
+        return NextResponse.json({ success: true, data: newContact }, { status: 201 });
     } catch (error) {
         console.error('Contact error:', error);
         return NextResponse.json({ success: false, error: 'Erreur serveur.' }, { status: 500 });

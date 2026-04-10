@@ -3,6 +3,7 @@ import dbConnect from '@/lib/db';
 import Request from '@/models/Request';
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { sendSMS } from "@/lib/winsms";
 
 export async function POST(req) {
     try {
@@ -15,6 +16,58 @@ export async function POST(req) {
         }
 
         const newRequest = await Request.create(data);
+
+        // Send SMS notification to admin asynchronously (fire and forget)
+        try {
+            const reqType = data.type?.toUpperCase() || 'DEMANDE';
+            const clientName = `${data.firstName || ''} ${data.lastName || ''}`.trim() || 'Client';
+            const clientPhone = data.phone || data.whatsapp || 'Non spécifié';
+            
+            let smsMessage = `🚨 [${reqType}]\nDe: ${clientName}\nTel: ${clientPhone}`;
+            
+            if (['DIAGNOSTIC', 'RECLAMATION', 'RDV'].includes(reqType)) {
+                smsMessage = `🚨 [${reqType}]\nTel: ${clientPhone}`;
+                if (data.surface) smsMessage += `\nSurface: ${data.surface}m2`;
+                if (data.location?.city) smsMessage += `\nLieu: ${data.location.city}${data.location.state ? ', ' + data.location.state : ''}`;
+                if (data.times && data.times[0]) {
+                    const dateObj = new Date(data.times[0]);
+                    if (!isNaN(dateObj)) {
+                        const dateStr = dateObj.toLocaleString('fr-FR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                        smsMessage += `\nDate: ${dateStr}`;
+                    }
+                }
+                const msgAbbr = data.message ? data.message.substring(0, 40) : '';
+                if (msgAbbr) smsMessage += `\nMsg: ${msgAbbr}...`;
+            } else {
+                if (data.projectName) smsMessage += `\nSujet: ${data.projectName}`;
+            }
+
+            // Keep SMS length within bounds
+            smsMessage = smsMessage.substring(0, 150);
+            
+            // Send SMS to Admin
+            sendSMS('21653520222', smsMessage).catch(e => console.error("Admin SMS Error:", e));
+
+            // Envoyer un SMS de remerciement au client s'il a fourni un numéro
+            if (clientPhone && clientPhone !== 'Non spécifié') {
+                const clientMsg = `Merci pour votre confiance envers SDK Bâtiment !\n\nVotre demande de ${reqType} a bien été reçue. Notre équipe technique va vous recontacter très prochainement dans les plus brefs délais.\n\nInfos: 53 520 222`;
+                sendSMS(clientPhone, clientMsg).catch(e => console.error("Client SMS Error:", e));
+            }
+        } catch (smsError) {
+            console.error("Failed to trigger SMS:", smsError);
+        }
+
+        // Send Lead to n8n Webhook asynchronously (fire and forget)
+        if (process.env.N8N_WEBHOOK_URL) {
+            fetch(process.env.N8N_WEBHOOK_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    source: 'devis', 
+                    lead: newRequest 
+                })
+            }).catch(e => console.error("n8n Webhook failed:", e));
+        }
 
         return NextResponse.json({ success: true, message: "Demande envoyée", id: newRequest._id });
     } catch (error) {

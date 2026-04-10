@@ -1,17 +1,22 @@
 import mongoose from 'mongoose';
 
 const RequestSchema = new mongoose.Schema({
-    type: { type: String, required: true, enum: ['diagnostic', 'reclamation', 'rdv'] },
+    type: { type: String, required: true, enum: ['diagnostic', 'reclamation', 'rdv', 'devis'] },
     message: { type: String, required: true },
-    date: { type: Date }, // For RDV specific single date
-    surface: { type: Number },
+    firstName: { type: String },
+    lastName: { type: String },
     phone: { type: String },
+    whatsapp: { type: String },
+    email: { type: String },
+    projectName: { type: String },
+    date: { type: Date },
+    surface: { type: Number },
     location: {
         lat: Number,
         lng: Number,
         address: String
     },
-    times: [Date], // For Diagnostic multiple slots
+    times: [Date],
     images: [String],
     status: { type: String, default: 'pending', enum: ['pending', 'contacted', 'resolved'] },
 }, { timestamps: true });

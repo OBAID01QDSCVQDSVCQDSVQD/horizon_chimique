@@ -3,11 +3,15 @@ import dbConnect from '@/lib/db';
 import Realization from '@/models/Realization';
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { getMobileSession } from "@/lib/mobileAuth";
 
 export async function POST(req, { params }) {
     try {
         await dbConnect();
-        const session = await getServerSession(authOptions);
+        let session = await getServerSession(authOptions);
+        if (!session) {
+            session = await getMobileSession(req);
+        }
         if (!session) {
             return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
         }

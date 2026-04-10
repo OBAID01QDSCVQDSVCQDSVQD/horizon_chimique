@@ -2,60 +2,60 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
-import admin from '@/lib/firebase-admin';
+import OTP from '@/models/OTP';
 
 export async function POST(req) {
     try {
-        const { name, identifier, email: reqEmail, phone: reqPhone, password, role, specialty, firebaseToken } = await req.json();
+        const body = await req.json();
+        const { name, identifier, email: reqEmail, phone: reqPhone, password, role, specialty, otp } = body;
 
         // Basic Validation
-        if (!name || (!identifier && !firebaseToken && !reqPhone) || (role === 'artisan' && !password)) {
+        if (!name || (!identifier && !reqPhone) || (role === 'artisan' && !password)) {
             return NextResponse.json({ success: false, error: "Veuillez remplir tous les champs obligatoires." }, { status: 400 });
         }
 
         await dbConnect();
 
-        let phone = reqPhone || '';
+        let phone = reqPhone || identifier || '';
         let email = reqEmail || '';
 
-        // If it's a client with Firebase Token
-        if (role === 'client' && firebaseToken) {
-            try {
-                const decodedToken = await admin.auth().verifyIdToken(firebaseToken);
-                phone = decodedToken.phone_number;
-            } catch (error) {
-                return NextResponse.json({ success: false, error: "Token de vérification invalide." }, { status: 401 });
+        // Verification for Client role (WinSMS OTP)
+        if (role === 'client' && otp) {
+            // Verify OTP
+            const otpRecord = await OTP.findOne({ phone, code: otp });
+            if (!otpRecord) {
+                return NextResponse.json({ success: false, error: "Code de vérification incorrect ou expiré." }, { status: 401 });
             }
-        } else if (identifier) {
-            // Legacy/Artisan with single identifier field
-            const isEmail = identifier.includes('@');
-            if (isEmail) {
-                if (!email) email = identifier.toLowerCase();
-            } else {
-                if (!phone) phone = identifier;
+            if (otpRecord.expiresAt < new Date()) {
+                return NextResponse.json({ success: false, error: "Code de vérification expiré." }, { status: 401 });
             }
+            
+            // Success, delete OTP
+            await OTP.deleteMany({ phone });
+        } else if (role === 'artisan' && !password) {
+             return NextResponse.json({ success: false, error: "Mot de passe requis pour les artisans." }, { status: 400 });
         }
 
         // Check for existing user
-        const existingUser = await User.findOne({
-            $or: [
-                ...(email ? [{ email }] : []),
-                ...(phone ? [{ phone }] : [])
-            ]
-        });
-
-        if (existingUser) {
-            const conflictType = existingUser.email === email ? 'email' : 'numéro de téléphone';
-            return NextResponse.json({
-                success: false,
-                error: `Ce ${conflictType} est déjà utilisé par un autre compte.`
-            }, { status: 400 });
+        const existingQuery = [];
+        if (email) existingQuery.push({ email });
+        if (phone) existingQuery.push({ phone });
+        
+        if (existingQuery.length > 0) {
+            const existingUser = await User.findOne({ $or: existingQuery });
+            if (existingUser) {
+                const conflictType = existingUser.email === email ? 'email' : 'numéro de téléphone';
+                return NextResponse.json({
+                    success: false,
+                    error: `Ce ${conflictType} est déjà utilisé par un autre compte.`
+                }, { status: 400 });
+            }
         }
 
         // Handle Password
         let finalPassword = password;
-        if (role === 'client' && firebaseToken && !password) {
-            // Generate a random password for SMS users (they log in via OTP)
+        if (role === 'client' && !password) {
+            // Generate random password for OTP users
             finalPassword = Math.random().toString(36).slice(-10) + Math.random().toString(36).slice(-10);
         }
 

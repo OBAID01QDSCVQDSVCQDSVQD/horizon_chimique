@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
-import { Save, Loader2, Upload, Trash2, Building, Wand2, Settings } from 'lucide-react';
+import { Save, Loader2, Upload, Trash2, Building, Wand2, Settings, Smartphone, RefreshCcw } from 'lucide-react';
 import { compressImage } from '@/utils/compressImage';
 import Link from 'next/link';
 // import { removeBackground } from "@imgly/background-removal"; // Removed in favor of manual white removal
@@ -66,7 +66,14 @@ export default function SettingsPage() {
         website: '',
         logoUrl: '',
         catalogUrl: '',
-        facebookPixelId: ''
+        facebookPixelId: '',
+        mobileApp: {
+            latestVersion: '1.0.1',
+            buildNumber: 3,
+            forceUpdate: true,
+            updateMessage: '',
+            downloadUrl: ''
+        }
     });
 
     useEffect(() => {
@@ -75,7 +82,10 @@ export default function SettingsPage() {
                 const res = await fetch('/api/settings');
                 const data = await res.json();
                 if (data.success) {
-                    setFormData(data.data);
+                    setFormData(prev => ({
+                        ...data.data,
+                        mobileApp: data.data.mobileApp || prev.mobileApp
+                    }));
                 }
             } catch (error) {
                 console.error(error);
@@ -88,8 +98,33 @@ export default function SettingsPage() {
     }, []);
 
     const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+        const { name, value, type, checked } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: type === 'checkbox' ? checked : value
+        }));
+    };
+
+    const handleMobileChange = (e) => {
+        const { name, value, type, checked } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            mobileApp: {
+                ...(prev.mobileApp || {}),
+                [name]: type === 'checkbox' ? checked : value
+            }
+        }));
+    };
+
+    const pushNewVersion = () => {
+        setFormData(prev => ({
+            ...prev,
+            mobileApp: {
+                ...prev.mobileApp,
+                buildNumber: (prev.mobileApp.buildNumber || 0) + 1
+            }
+        }));
+        toast.success("Build incrementé ! Cliquez sur Enregistrer pour forcer la mise à jour.");
     };
 
     const handleLogoUpload = async (e) => {
@@ -404,6 +439,65 @@ export default function SettingsPage() {
                             <label className="text-sm font-bold text-slate-300">ID du Facebook Pixel</label>
                             <input type="text" name="facebookPixelId" value={formData.facebookPixelId} onChange={handleChange} className="w-full mt-2 px-4 py-2 bg-slate-900 border border-slate-600 text-white rounded-lg focus:ring-2 focus:ring-primary/50 outline-none placeholder:text-slate-600" placeholder="Ex: 123456789012345" />
                             <p className="text-xs text-slate-500 mt-1">Laissez vide pour désactiver le pixel. Uniquement l'ID (ex: 123456789012345), ne copiez pas tout le script.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                {/* Mobile App Management */}
+                <div className="bg-slate-800 rounded-xl shadow-sm border border-slate-700 overflow-hidden p-6">
+                    <div className="flex items-center justify-between border-b border-slate-700 pb-2 mb-4">
+                        <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                            <Smartphone size={20} className="text-primary" />
+                            Gestion Application Mobile
+                        </h2>
+                        <div className="bg-primary/20 text-primary text-[10px] uppercase font-bold px-2 py-1 rounded">
+                            Bêta v1
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-sm font-bold text-slate-300">Version du Store</label>
+                                <input type="text" name="latestVersion" value={formData.mobileApp?.latestVersion || ''} onChange={handleMobileChange} className="w-full px-4 py-2 bg-slate-900 border border-slate-600 text-white rounded-lg outline-none" placeholder="Ex: 1.0.2" />
+                            </div>
+                            <div>
+                                <label className="text-sm font-bold text-slate-300">Build Actuel (Sert au Push)</label>
+                                <div className="flex gap-2">
+                                    <input type="number" readOnly value={formData.mobileApp?.buildNumber || 0} className="flex-1 px-4 py-2 bg-slate-700 border border-slate-600 text-white rounded-lg outline-none opacity-70" />
+                                    <button 
+                                        type="button" 
+                                        onClick={pushNewVersion}
+                                        className="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-lg transition-all flex items-center gap-2 font-bold"
+                                        title="Incrémenter la version pour forcer l'update"
+                                    >
+                                        <RefreshCcw size={18} /> Push
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-sm font-bold text-slate-300">Message de Mise à jour</label>
+                                <textarea name="updateMessage" value={formData.mobileApp?.updateMessage || ''} onChange={handleMobileChange} rows="3" className="w-full px-4 py-2 bg-slate-900 border border-slate-600 text-white rounded-lg outline-none" placeholder="Expliquez les nouveautés..." />
+                            </div>
+                            
+                            <label className="flex items-center gap-3 cursor-pointer p-3 bg-slate-900/50 rounded-lg border border-slate-700 hover:border-blue-500 transition-colors">
+                                <div className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${formData.mobileApp?.forceUpdate ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-400'}`}>
+                                    {formData.mobileApp?.forceUpdate ? <Settings size={14} className="animate-spin" /> : <Smartphone size={14} />}
+                                </div>
+                                <input type="checkbox" name="forceUpdate" checked={formData.mobileApp?.forceUpdate || false} onChange={handleMobileChange} className="hidden" />
+                                <div className="flex-1">
+                                    <p className="text-sm font-bold text-white">Forcer la mise à jour (Bloquant)</p>
+                                    <p className="text-[10px] text-slate-500">L'utilisateur ne pourra pas utiliser l'app sans mettre à jour.</p>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div className="md:col-span-2">
+                            <label className="text-sm font-bold text-slate-300">URL du fichier APK (Lien direct)</label>
+                            <input type="text" name="downloadUrl" value={formData.mobileApp?.downloadUrl || ''} onChange={handleMobileChange} className="w-full px-4 py-2 bg-slate-900 border border-slate-600 text-blue-400 font-mono text-xs rounded-lg outline-none" placeholder="https://..." />
                         </div>
                     </div>
                 </div>

@@ -3,6 +3,7 @@ import dbConnect from '@/lib/db';
 import Comment from '@/models/Comment';
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { getMobileSession } from "@/lib/mobileAuth";
 
 // GET Comments
 export async function GET(req) {
@@ -32,7 +33,10 @@ export async function GET(req) {
 export async function POST(req) {
     try {
         await dbConnect();
-        const session = await getServerSession(authOptions);
+        let session = await getServerSession(authOptions);
+        if (!session) {
+            session = await getMobileSession(req);
+        }
         if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
         const body = await req.json();

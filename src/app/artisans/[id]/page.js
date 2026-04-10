@@ -3,7 +3,8 @@ import User from '@/models/User';
 import Realization from '@/models/Realization';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { MapPin, Phone, Mail, Globe, Calendar, CheckCircle2, Star, ArrowRight } from 'lucide-react';
+import WhatsAppButton from '@/components/WhatsAppButton';
+import { MapPin, Phone, Mail, Globe, Calendar, CheckCircle2, Star, ArrowRight, MessageCircle } from 'lucide-react';
 import ReviewSection from '@/components/ReviewSection';
 
 export default async function ArtisanProfile({ params }) {
@@ -79,9 +80,12 @@ export default async function ArtisanProfile({ params }) {
                                         )}
                                     </div>
                                 </div>
-                                <a href={`https://wa.me/${artisan.phone?.replace(/\s+/g, '')}`} target="_blank" className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg active:scale-95 flex items-center gap-2">
-                                    <Phone size={18} /> Contacter
-                                </a>
+                                {artisan.phone && (
+                                    <WhatsAppButton 
+                                        phone={artisan.phone} 
+                                        className="px-6 py-3" 
+                                    />
+                                )}
                             </div>
 
                             {artisan.bio && (

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Search, Filter, ArrowRight, Droplets, LayoutGrid, List } from 'lucide-react';
+import { trackFbEvent } from '@/utils/trackFbEvent';
 
 export default function ProductsCatalogPage() {
     const [products, setProducts] = useState([]);
@@ -46,9 +47,7 @@ export default function ProductsCatalogPage() {
         if (!searchTerm) return;
 
         const delayDebounceFn = setTimeout(() => {
-            if (typeof window !== 'undefined' && window.fbq) {
-                window.fbq('track', 'Search', { search_string: searchTerm });
-            }
+            trackFbEvent('Search', { search_string: searchTerm });
         }, 1000);
 
         return () => clearTimeout(delayDebounceFn);

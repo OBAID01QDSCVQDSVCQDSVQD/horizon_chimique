@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import dbConnect from '@/lib/db';
 import Realization from '@/models/Realization';
+import { getMobileSession } from "@/lib/mobileAuth";
 
 export async function GET(req, { params }) {
     try {
@@ -21,7 +22,10 @@ export async function GET(req, { params }) {
 
 export async function PUT(req, { params }) {
     try {
-        const session = await getServerSession(authOptions);
+        let session = await getServerSession(authOptions);
+        if (!session) {
+            session = await getMobileSession(req);
+        }
         if (!session) {
             return NextResponse.json({ success: false, error: "Authentication requise" }, { status: 401 });
         }
@@ -59,7 +63,10 @@ export async function PUT(req, { params }) {
 
 export async function DELETE(req, { params }) {
     try {
-        const session = await getServerSession(authOptions);
+        let session = await getServerSession(authOptions);
+        if (!session) {
+            session = await getMobileSession(req);
+        }
         if (!session) {
             return NextResponse.json({ success: false, error: "Authentication requise" }, { status: 401 });
         }

@@ -1,13 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Loader2, LogIn, Phone, Mail, Lock, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { auth } from '@/lib/firebase';
-import { RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth';
 
 export default function LoginPage() {
     const router = useRouter();
@@ -16,57 +14,11 @@ export default function LoginPage() {
     const [identifier, setIdentifier] = useState('');
     const [otp, setOtp] = useState('');
     const [showOtpInput, setShowOtpInput] = useState(false);
-    const [confirmationResult, setConfirmationResult] = useState(null);
     const [formData, setFormData] = useState({
         identifier: '',
         password: ''
     });
     const [showPassword, setShowPassword] = useState(false);
-
-
-    useEffect(() => {
-        let isMounted = true;
-
-        const initRecaptcha = async () => {
-            const recaptchaDiv = document.getElementById('recaptcha-container');
-            if (!recaptchaDiv || window.recaptchaVerifier) return;
-
-            try {
-                if (!isMounted) return;
-
-                window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-                    'size': 'normal',
-                    'callback': () => {
-                        console.log("ReCaptcha Solved");
-                    },
-                    'expired-callback': () => {
-                        if (window.recaptchaVerifier) {
-                            window.recaptchaVerifier.clear();
-                            window.recaptchaVerifier = null;
-                        }
-                    }
-                });
-                await window.recaptchaVerifier.render();
-            } catch (e) {
-                console.error("Recaptcha Init Error", e);
-            }
-        };
-
-        if (loginMethod === 'sms' && !showOtpInput) {
-            initRecaptcha();
-        }
-
-        return () => {
-            isMounted = false;
-            // Cleanup if needed when recaptcha element unmounts
-            if (loginMethod !== 'sms' && window.recaptchaVerifier) {
-                try {
-                    window.recaptchaVerifier.clear();
-                } catch (e) { }
-                window.recaptchaVerifier = null;
-            }
-        };
-    }, [loginMethod, showOtpInput]);
 
     const handleSendOTP = async () => {
         if (!identifier) {
@@ -74,60 +26,35 @@ export default function LoginPage() {
             return;
         }
 
-        // Vérifier si ReCaptcha a été affiché et si window.recaptchaVerifier existe
-        if (!window.recaptchaVerifier) {
-            toast.error("Veuillez patienter pendant le chargement de la vérification");
-            return;
-        }
-
         setSubmitting(true);
         try {
-            console.log("Tentative d'envoi OTP vers:", identifier);
+            console.log("Tentative d'envoi OTP vers (WinSMS):", identifier);
+            
+            const res = await fetch('/api/auth/otp/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone: identifier })
+            });
 
-            let phone = identifier.trim();
-            if (!phone.startsWith('+')) phone = '+216' + phone;
+            const data = await res.json();
 
-            console.log("Numéro formaté:", phone);
-            const appVerifier = window.recaptchaVerifier;
-
-            // Forcer le rendu si ce n'est pas déjà fait
-            if (typeof appVerifier.render === 'function') {
-                await appVerifier.render();
-            }
-
-            const confirmation = await signInWithPhoneNumber(auth, phone, appVerifier);
-            console.log("OTP envoyé avec succès!");
-            setConfirmationResult(confirmation);
-            setShowOtpInput(true);
-            toast.success("Code envoyé !");
-        } catch (error) {
-            console.error("Firebase Auth Error Full:", error);
-            console.log("Error code:", error.code);
-            console.log("Error message:", error.message);
-
-            if (error.code === 'auth/invalid-phone-number') {
-                toast.error("Numéro de téléphone invalide");
-            } else if (error.code === 'auth/too-many-requests') {
-                toast.error("Trop de tentatives. Veuillez réessayer plus tard.");
+            if (res.ok) {
+                setShowOtpInput(true);
+                toast.success("Code envoyé via SMS !");
             } else {
-                toast.error("Erreur d'envoi du code (Vérifiez votre connexion)");
+                const msg = [data.error, data.hint].filter(Boolean).join(' — ');
+                toast.error(msg || "Erreur d'envoi du code");
             }
-
-            if (window.recaptchaVerifier) {
-                try {
-                    window.recaptchaVerifier.clear();
-                    window.recaptchaVerifier = null;
-                    // Forcer un re-render de l'effect pour recréer le captcha
-                    setShowOtpInput(false);
-                } catch (e) { }
-            }
+        } catch (error) {
+            console.error("OTP Error:", error);
+            toast.error("Erreur d'envoi du code (Vérifiez votre connexion)");
         } finally {
             setSubmitting(false);
         }
     };
 
     const handleVerifyOTP = async (e) => {
-        e.preventDefault();
+        if (e) e.preventDefault();
         if (!otp || otp.length < 6) {
             toast.error("Veuillez entrer le code de 6 chiffres");
             return;
@@ -135,17 +62,9 @@ export default function LoginPage() {
 
         setSubmitting(true);
         try {
-            if (!confirmationResult) {
-                toast.error("Session expirée. Veuillez renvoyer le code.");
-                setShowOtpInput(false);
-                return;
-            }
-
-            const result = await confirmationResult.confirm(otp);
-            const idToken = await result.user.getIdToken();
-
             const res = await signIn('credentials', {
-                firebaseToken: idToken,
+                phone: identifier,
+                otp: otp,
                 redirect: false
             });
 
@@ -157,7 +76,7 @@ export default function LoginPage() {
                 router.refresh();
             }
         } catch (error) {
-            toast.error("Code incorrect");
+            toast.error("Une erreur est survenue lors de la vérification");
         } finally {
             setSubmitting(false);
         }
@@ -170,7 +89,7 @@ export default function LoginPage() {
             if (!showOtpInput) {
                 await handleSendOTP();
             } else {
-                await handleVerifyOTP(e);
+                await handleVerifyOTP();
             }
             return;
         }
@@ -248,7 +167,6 @@ export default function LoginPage() {
                     ) : (
                         <form onSubmit={handleSubmit} className="space-y-6 animate-in fade-in slide-in-from-right-8 duration-300">
 
-                            {/* Bouton Retour en haut du formulaire */}
                             <button
                                 type="button"
                                 onClick={() => {
@@ -316,17 +234,18 @@ export default function LoginPage() {
                                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
                                     {!showOtpInput ? (
                                         <div>
-                                            <label className="text-sm font-bold text-slate-700 block mb-2">Numéro de Téléphone</label>
+                                            <label className="text-sm font-bold text-slate-700 block mb-2">Numéro de Téléphone (Tunisie)</label>
                                             <div className="relative">
-                                                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                                                    <Phone size={18} />
+                                                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">
+                                                    +216
                                                 </div>
                                                 <input
                                                     type="text"
                                                     value={identifier}
-                                                    onChange={(e) => setIdentifier(e.target.value)}
-                                                    className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-                                                    placeholder="22 123 456"
+                                                    onChange={(e) => setIdentifier(e.target.value.replace(/\D/g, ''))}
+                                                    className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                                                    placeholder="96 123 456"
+                                                    maxLength={8}
                                                     required
                                                 />
                                             </div>
@@ -335,26 +254,24 @@ export default function LoginPage() {
                                         <div>
                                             <label className="text-sm font-bold text-slate-700 block mb-1 text-center">Code de vérification</label>
                                             <p className="text-xs text-slate-500 text-center mb-4 leading-relaxed">
-                                                Bech yjik SMS fih code ba3d chwaya, 7ottou lna 3aychek. 💬
+                                                Un code a été envoyé au +216 {identifier}. 💬
                                             </p>
                                             <input
                                                 type="text"
                                                 value={otp}
                                                 onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                                                className="w-full px-4 py-4 border-2 border-primary/30 rounded-xl text-center text-2xl font-bold tracking-widest outline-none focus:border-primary"
+                                                className="w-full px-4 py-4 border-2 border-primary/30 rounded-xl text-center text-3xl font-bold tracking-[0.5em] outline-none focus:border-primary"
                                                 placeholder="000000"
                                                 maxLength={6}
                                                 required
                                             />
-                                            <button type="button" onClick={() => setShowOtpInput(false)} className="text-xs text-primary font-bold mt-2 block mx-auto underline">Modifier le numéro</button>
+                                            <button type="button" onClick={() => setShowOtpInput(false)} className="text-xs text-primary font-bold mt-4 block mx-auto underline">Modifier le numéro</button>
                                         </div>
                                     )}
-                                    <div id="recaptcha-container" className={`mt-4 flex justify-center ${showOtpInput ? 'hidden' : ''}`}></div>
                                 </div>
                             )}
 
                             <button
-                                id={loginMethod === 'sms' && !showOtpInput ? "send-otp-button" : "submit-button"}
                                 type="submit"
                                 disabled={submitting}
                                 className="w-full bg-primary text-white font-bold py-3.5 rounded-xl hover:bg-primary-dark transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-200 mt-6"

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Heart } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useSession } from 'next-auth/react';
+import { trackFbEvent } from '@/utils/trackFbEvent';
 
 export default function LikeButton({ realizationId, initialLikes = [], initialIsLiked = false }) {
     const count = Array.isArray(initialLikes) ? initialLikes.length : (initialLikes || 0);
@@ -33,6 +34,12 @@ export default function LikeButton({ realizationId, initialLikes = [], initialIs
             if (data.success) {
                 setLikes(data.likesCount);
                 setIsLiked(data.isLiked);
+                if (data.isLiked) {
+                    trackFbEvent('AddToWishlist', {
+                        content_ids: [realizationId],
+                        content_type: 'realization'
+                    });
+                }
             } else {
                 setLikes(prevLikes);
                 setIsLiked(prevIsLiked);

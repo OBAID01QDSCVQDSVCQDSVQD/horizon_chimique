@@ -20,9 +20,18 @@ export async function PUT(request) {
     try {
         await dbConnect();
         const body = await request.json();
-        const setting = await Setting.findOneAndUpdate({}, body, { new: true, upsert: true });
+
+        // Strip Mongoose internal fields to avoid immutable field errors
+        const { _id, __v, createdAt, updatedAt, ...updateData } = body;
+
+        const setting = await Setting.findOneAndUpdate(
+            {},
+            { $set: updateData },
+            { new: true, upsert: true, runValidators: false }
+        );
         return NextResponse.json({ success: true, data: setting });
     } catch (error) {
+        console.error('Settings PUT error:', error);
         return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
 }

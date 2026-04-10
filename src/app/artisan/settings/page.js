@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { Loader2, Save, ArrowLeft, Building, MapPin, FileText, User, Upload } from 'lucide-react';
@@ -22,6 +22,7 @@ export default function ProfileSettings() {
     const [formData, setFormData] = useState({
         name: session?.user?.name || '',
         image: session?.user?.image || '',
+        cachet: '',
         companyName: '',
         address: '',
         lastLocation: null,
@@ -29,6 +30,7 @@ export default function ProfileSettings() {
     });
     const [loading, setLoading] = useState(true);
     const [uploadingImage, setUploadingImage] = useState(false);
+    const [uploadingCachet, setUploadingCachet] = useState(false);
 
     // Fetch real data on load
     useEffect(() => {
@@ -84,7 +86,7 @@ export default function ProfileSettings() {
                 });
                 await update({ image: newUrl });
 
-                toast.success("Photo mise à jour et enregistrée !", { id: toastId });
+                toast.success("Photo mise à jour !", { id: toastId });
             } else {
                 toast.error("Erreur upload", { id: toastId });
             }
@@ -93,6 +95,87 @@ export default function ProfileSettings() {
             toast.error("Erreur technique", { id: toastId });
         } finally {
             setUploadingImage(false);
+        }
+    };
+
+    const handleCachetUpload = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setUploadingCachet(true);
+        const toastId = toast.loading("Traitement et upload du cachet...");
+
+        try {
+            // Processing Image to remove white background
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = async (event) => {
+                const img = new Image();
+                img.src = event.target.result;
+                img.onload = async () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+
+                    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const data = imgData.data;
+
+                    // Improved: Linear interpolation similar to Python's keep_solid
+                    for (let i = 0; i < data.length; i += 4) {
+                        const r = data[i];
+                        const g = data[i + 1];
+                        const b = data[i + 2];
+                        
+                        // Calculate Euclidean distance from white (255, 255, 255)
+                        const dist = Math.sqrt(
+                            Math.pow(r - 255, 2) + 
+                            Math.pow(g - 255, 2) + 
+                            Math.pow(b - 255, 2)
+                        );
+                        
+                        // Same logic as Python script:
+                        // dist <= 20: alpha = 0 (transparent)
+                        // dist >= 100: alpha = 255 (opaque)
+                        // in between: linear transition
+                        let alpha = 255;
+                        if (dist <= 20) {
+                            alpha = 0;
+                        } else if (dist < 100) {
+                            // (dist - 20) / (100 - 20) * 255
+                            alpha = Math.round(((dist - 20) / 80) * 255);
+                        }
+                        
+                        data[i + 3] = alpha; // Set Alpha
+                    }
+                    ctx.putImageData(imgData, 0, 0);
+
+                    // Convert canvas to blob
+                    canvas.toBlob(async (blob) => {
+                        const uploadData = new FormData();
+                        uploadData.append('file', blob, 'cachet.png');
+
+                        const res = await fetch('/api/upload', {
+                            method: 'POST',
+                            body: uploadData
+                        });
+                        const uploadResult = await res.json();
+
+                        if (uploadResult.success) {
+                            setFormData(prev => ({ ...prev, cachet: uploadResult.url }));
+                            toast.success("Cachet traité et enregistré !", { id: toastId });
+                        } else {
+                            toast.error("Erreur upload cachet", { id: toastId });
+                        }
+                        setUploadingCachet(false);
+                    }, 'image/png');
+                };
+            };
+        } catch (error) {
+            console.error(error);
+            toast.error("Erreur technique", { id: toastId });
+            setUploadingCachet(false);
         }
     };
 
@@ -109,6 +192,7 @@ export default function ProfileSettings() {
             const data = await res.json();
 
             if (data.success) {
+                // Only update session fields if needed
                 await update({ name: formData.name, image: formData.image });
                 toast.success("Profil mis à jour !");
                 router.refresh();
@@ -121,6 +205,14 @@ export default function ProfileSettings() {
             setSubmitting(false);
         }
     };
+
+    const handleLocationSelect = useCallback((loc) => {
+        setFormData(prev => ({
+            ...prev,
+            lastLocation: loc,
+            address: loc.address || prev.address
+        }));
+    }, []);
 
     return (
         <div className="min-h-screen bg-slate-50 py-12 px-4">
@@ -141,30 +233,74 @@ export default function ProfileSettings() {
                     <div className="p-8">
                         <form onSubmit={handleSubmit} className="space-y-6">
 
-                            {/* Profile Image */}
-                            <div className="flex justify-center mb-6">
-                                <div className="relative w-32 h-32 rounded-full bg-slate-100 border-4 border-white shadow-md overflow-hidden group cursor-pointer hover:border-primary transition-colors">
-                                    {formData.image ? (
-                                        <img src={formData.image} alt="Profile" className="w-full h-full object-cover" />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-slate-300">
-                                            <User size={48} />
+                            {/* Images Section */}
+                            <div className="grid grid-cols-2 gap-8 mb-8">
+                                {/* Profile Image */}
+                                <div className="flex flex-col items-center">
+                                    <label className="text-xs font-bold text-slate-500 uppercase mb-2">Photo de profil</label>
+                                    <div className="relative w-32 h-32 rounded-full bg-slate-100 border-4 border-white shadow-md overflow-hidden group cursor-pointer hover:border-primary transition-colors">
+                                        {formData.image ? (
+                                            <img src={formData.image} alt="Profile" className="w-full h-full object-cover" />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-slate-300">
+                                                <User size={48} />
+                                            </div>
+                                        )}
+                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white">
+                                            {uploadingImage ? <Loader2 className="animate-spin" /> : <Upload size={24} />}
+                                            <span className="text-[10px] font-bold mt-1">Changer</span>
                                         </div>
-                                    )}
-
-                                    {/* Overlay */}
-                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white">
-                                        {uploadingImage ? <Loader2 className="animate-spin" /> : <Upload size={24} />}
-                                        <span className="text-xs font-bold mt-1">Modifier</span>
+                                        <input type="file" accept="image/*" onChange={handleImageUpload} disabled={uploadingImage} className="absolute inset-0 opacity-0 cursor-pointer" />
                                     </div>
+                                </div>
 
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={handleImageUpload}
-                                        disabled={uploadingImage}
-                                        className="absolute inset-0 opacity-0 cursor-pointer"
-                                    />
+                                {/* Cachet / Stamp */}
+                                <div className="flex flex-col items-center">
+                                    <label className="text-xs font-bold text-slate-500 uppercase mb-2">Cachet Applicateur</label>
+                                    <div className="relative w-32 h-32 rounded-xl bg-slate-100 border-2 border-dashed border-slate-200 shadow-sm overflow-hidden group transition-all flex items-center justify-center">
+                                        {formData.cachet ? (
+                                            <>
+                                                <div className="p-2 w-full h-full">
+                                                    <img src={formData.cachet} alt="Cachet" className="w-full h-full object-contain mix-blend-multiply" />
+                                                </div>
+                                                {/* Delete Button */}
+                                                <button
+                                                    type="button"
+                                                    onClick={async (e) => {
+                                                        e.preventDefault();
+                                                        if (confirm("Voulez-vous vraiment supprimer votre cachet ?")) {
+                                                            const newFormData = { ...formData, cachet: '' };
+                                                            setFormData(newFormData);
+                                                            const res = await fetch('/api/profile', {
+                                                                method: 'PUT',
+                                                                headers: { 'Content-Type': 'application/json' },
+                                                                body: JSON.stringify({ cachet: '' })
+                                                            });
+                                                            if (res.ok) toast.success("Cachet supprimé !");
+                                                        }
+                                                    }}
+                                                    className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-red-600 shadow-md"
+                                                    title="Supprimer le cachet"
+                                                >
+                                                    <Loader2 size={14} className="hidden" />
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <div className="text-center p-4">
+                                                <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center mx-auto mb-2 text-slate-500">
+                                                    <Upload size={20} />
+                                                </div>
+                                                <span className="text-[8px] font-bold text-slate-400 uppercase leading-tight block">Upload Cachet<br/>(Fond blanc auto-supprimé)</span>
+                                            </div>
+                                        )}
+                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white cursor-pointer">
+                                            {uploadingCachet ? <Loader2 className="animate-spin" /> : <Upload size={24} />}
+                                            <span className="text-[10px] font-bold mt-1">Mettre à jour</span>
+                                            <input type="file" accept="image/*" onChange={handleCachetUpload} disabled={uploadingCachet} className="absolute inset-0 opacity-0 cursor-pointer" />
+                                        </div>
+                                    </div>
+                                    <p className="text-[9px] text-slate-400 mt-2 text-center leading-tight">Uploadez votre cachet sur fond blanc.<br/>Il apparaîtra sur vos certificats.</p>
                                 </div>
                             </div>
 
@@ -212,13 +348,8 @@ export default function ProfileSettings() {
                                 </label>
                                 <div className="p-1 border border-slate-200 rounded-xl overflow-hidden">
                                     <LocationPicker
-                                        onLocationSelect={(loc) => {
-                                            setFormData(prev => ({
-                                                ...prev,
-                                                lastLocation: loc,
-                                                address: loc.address || prev.address // Auto-fill address if available
-                                            }));
-                                        }}
+                                        initialLocation={formData.lastLocation}
+                                        onLocationSelect={handleLocationSelect}
                                     />
                                 </div>
                                 <p className="text-xs text-slate-500 mt-2">

@@ -91,6 +91,11 @@ export default function RequestsPage() {
 
                             <div className="grid md:grid-cols-2 gap-4 text-sm text-slate-600 bg-slate-50 p-4 rounded-lg">
                                 {/* Details */}
+                                {(req.firstName || req.lastName) && (
+                                    <div className="col-span-2 flex items-center gap-2">
+                                        <User size={16} /> <span className="font-bold">Client:</span> {req.firstName || ''} {req.lastName || ''}
+                                    </div>
+                                )}
                                 {req.surface && (
                                     <div><span className="font-bold">Surface:</span> {req.surface} m²</div>
                                 )}

@@ -5,12 +5,8 @@ const { spawn } = require('node:child_process')
 const env = { ...process.env }
 
 ;(async() => {
-  // If running the web server then prerender pages
-  if (process.argv.slice(-3).join(' ') === 'npm run start') {
-    await exec('npx next build --experimental-build-mode generate')
-  }
-
-  // launch application
+  // Build is done at Docker image build time (npx next build in Dockerfile)
+  // No runtime rebuild needed — just launch the application
   await exec(process.argv.slice(2).join(' '))
 })()
 

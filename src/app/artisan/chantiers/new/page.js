@@ -9,10 +9,15 @@ export default function NewChantierPage() {
     const router = useRouter();
     const [submitting, setSubmitting] = useState(false);
 
+    const toTitleCase = (str) => {
+        return str.replace(/\b\w/g, l => l.toUpperCase());
+    };
+
     // Form State
     const [formData, setFormData] = useState({
         clientName: '',
         clientPhone: '',
+        address: '',
         invoiceImage: '',
         surface_sol: '',
         lineaire_acrotere: '',
@@ -96,8 +101,8 @@ export default function NewChantierPage() {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (!formData.clientName || !formData.clientPhone || !formData.invoiceImage) {
-            toast.error("Veuillez remplir tous les champs obligatoires (Client, Téléphone, Photo).");
+        if (!formData.clientName || !formData.clientPhone || !formData.address) {
+            toast.error("Veuillez remplir tous les champs obligatoires (Client, Téléphone, Adresse).");
             return;
         }
 
@@ -117,9 +122,13 @@ export default function NewChantierPage() {
             const data = await res.json();
 
             if (data.success) {
-                toast.success("Chantier déclaré ! Ouverture de WhatsApp...");
-                if (data.whatsappLink) {
-                    window.open(data.whatsappLink, '_blank');
+                if (data.smsStatus?.sent) {
+                    toast.success("Chantier déclaré ! SMS envoyé au client.");
+                } else {
+                    toast.success("Chantier déclaré !");
+                    if (data.smsStatus?.error) {
+                        toast.error(`SMS non envoyé: ${data.smsStatus.error}`, { duration: 5000 });
+                    }
                 }
                 router.push('/artisan/dashboard');
             } else {
@@ -167,7 +176,7 @@ export default function NewChantierPage() {
                                         type="text"
                                         placeholder="Ex: Ahmed Ben Ali"
                                         value={formData.clientName}
-                                        onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
+                                        onChange={(e) => setFormData({ ...formData, clientName: toTitleCase(e.target.value) })}
                                         className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 outline-none"
                                         required
                                     />
@@ -183,6 +192,17 @@ export default function NewChantierPage() {
                                         required
                                     />
                                 </div>
+                                <div>
+                                    <label className="text-sm font-bold text-slate-700 mb-1 block">Adresse du Chantier (Client)</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Ex: Tunis, Centre Ville"
+                                        value={formData.address}
+                                        onChange={(e) => setFormData({ ...formData, address: toTitleCase(e.target.value) })}
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 outline-none"
+                                        required
+                                    />
+                                </div>
                             </div>
                         </div>
 
@@ -194,7 +214,7 @@ export default function NewChantierPage() {
                             </h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="text-sm font-bold text-slate-700 mb-1 block">Surface Sol (m²)</label>
+                                    <label className="text-sm font-bold text-slate-700 mb-1 block">Surface Toiture (m²)</label>
                                     <input
                                         type="number"
                                         placeholder="0"
@@ -306,7 +326,7 @@ export default function NewChantierPage() {
                         <div className="space-y-4">
                             <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                                 <span className="w-6 h-6 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-xs">4</span>
-                                Photo de la Facture
+                                Photo de la Facture <span className="text-slate-400 font-normal text-sm ml-2">(Optionnel)</span>
                             </h3>
 
                             <div className="relative border-2 border-dashed border-slate-300 rounded-xl bg-slate-50 p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-slate-100 transition-colors group">

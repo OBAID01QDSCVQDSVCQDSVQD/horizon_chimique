@@ -1,7 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Phone, Mail, MapPin, Send, Loader2, CheckCircle2, Globe } from 'lucide-react';
+import { Phone, Mail, MapPin, Send, Loader2, Globe } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 export default function ContactPage() {
@@ -14,7 +15,7 @@ export default function ContactPage() {
         message: ''
     });
     const [loading, setLoading] = useState(false);
-    const [submitted, setSubmitted] = useState(false);
+    const router = useRouter();
 
     // Company Settings from DB
     const [settings, setSettings] = useState(null);
@@ -57,12 +58,7 @@ export default function ContactPage() {
             const result = await res.json();
 
             if (res.ok) {
-                if (typeof window !== 'undefined' && window.fbq) {
-                    window.fbq('track', 'Contact');
-                }
-                setSubmitted(true);
-                toast.success("Message envoyé avec succès !");
-                setFormData({ name: '', phone: '', email: '', address: '', subject: '', message: '' });
+                router.push('/merci?type=contact');
             } else {
                 toast.error(result.error || "Une erreur est survenue.");
             }
@@ -180,23 +176,8 @@ export default function ContactPage() {
                         transition={{ duration: 0.5, delay: 0.2 }}
                         className="lg:col-span-2 bg-white rounded-3xl p-8 md:p-12 shadow-xl border border-slate-100"
                     >
-                        {submitted ? (
-                            <div className="h-full flex flex-col items-center justify-center text-center py-20">
-                                <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6 text-green-600">
-                                    <CheckCircle2 size={40} />
-                                </div>
-                                <h3 className="text-2xl font-bold text-slate-900 mb-2">Message Envoyé !</h3>
-                                <p className="text-slate-600 mb-8 max-w-md">Merci de nous avoir contactés. Notre équipe commerciale va traiter votre demande rapidement.</p>
-                                <button
-                                    onClick={() => setSubmitted(false)}
-                                    className="bg-primary text-white font-bold py-3 px-8 rounded-xl hover:bg-primary-dark transition-colors shadow-lg"
-                                >
-                                    Envoyer un autre message
-                                </button>
-                            </div>
-                        ) : (
-                            <form onSubmit={handleSubmit} className="space-y-6">
-                                <h3 className="text-2xl font-bold text-slate-900 mb-6">Envoyez-nous un message</h3>
+                        <form onSubmit={handleSubmit} className="space-y-6">
+                            <h3 className="text-2xl font-bold text-slate-900 mb-6">Envoyez-nous un message</h3>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>
@@ -285,7 +266,6 @@ export default function ContactPage() {
                                     </button>
                                 </div>
                             </form>
-                        )}
                     </motion.div>
                 </div>
             </div>

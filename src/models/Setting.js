@@ -54,6 +54,14 @@ const SettingSchema = new mongoose.Schema({
             projects: { type: String, default: "+5000" },
             experts: { type: String, default: "25" }
         }
+    },
+    // Mobile App Management
+    mobileApp: {
+        latestVersion: { type: String, default: '1.0.1' },
+        buildNumber: { type: Number, default: 3 },
+        forceUpdate: { type: Boolean, default: true },
+        updateMessage: { type: String, default: "Une mise à jour importante de l'application (v1.0.1) est disponible. L'amélioration de la galerie et la gestion des publications ont été ajoutées !" },
+        downloadUrl: { type: String, default: 'https://sdkbatiment.com/sdk-batiment-app.apk' }
     }
 }, { timestamps: true });
 

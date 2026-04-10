@@ -2,10 +2,12 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Calculator, Sparkles, Loader2, FileText, Printer, ArrowRight, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function SmartCalculatorPage() {
+    const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState(null);
     const [step, setStep] = useState(1);
@@ -31,16 +33,7 @@ export default function SmartCalculatorPage() {
             const data = await res.json();
 
             if (data.success) {
-                if (typeof window !== 'undefined' && window.fbq) {
-                    window.fbq('track', 'Lead', {
-                        content_name: 'Smart Devis AI',
-                        surface_area: formData.surfaceArea,
-                        support_type: formData.supportType
-                    });
-                }
-                setResult(data);
-                setStep(2);
-                toast.success("Calcul terminér !");
+                router.push('/merci?type=devis');
             } else {
                 toast.error(data.error || "Erreur de calcul");
             }

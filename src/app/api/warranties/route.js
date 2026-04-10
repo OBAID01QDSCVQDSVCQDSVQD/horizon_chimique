@@ -34,13 +34,13 @@ export async function GET(req) {
         }
 
         const warranties = await Warranty.find(query)
-            .populate('chantier', 'clientName clientPhone surface_sol lineaire_acrotere surface_murs support_type products')
+            .populate('chantier', 'clientName clientPhone address surface_sol lineaire_acrotere surface_murs support_type products')
             .populate({
                 path: 'artisan',
-                select: 'name email companyName address phone image taxId parentGoldArtisan',
+                select: 'name email companyName address phone image taxId parentGoldArtisan cachet',
                 populate: {
                     path: 'parentGoldArtisan',
-                    select: 'name email companyName address phone image taxId'
+                    select: 'name email companyName address phone image taxId cachet'
                 }
             })
             .sort({ createdAt: -1 });

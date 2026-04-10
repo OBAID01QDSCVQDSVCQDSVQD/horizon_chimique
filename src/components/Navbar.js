@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Menu, X, LogIn, UserCircle, LogOut, Image as ImageIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+
 import { useSession, signOut } from 'next-auth/react';
 
 export default function Navbar() {
@@ -31,13 +32,11 @@ export default function Navbar() {
     useEffect(() => {
         const fetchLogo = async () => {
             try {
-                const res = await fetch('/api/settings');
-                const data = await res.json();
-                if (data.success && data.data?.logoUrl) {
-                    setLogoUrl(data.data.logoUrl);
-                }
+                // We fetch settings for other purposes, but we keep the local logo as default 
+                // as requested to prevent it from changing after 2 seconds.
+                await fetch('/api/settings');
             } catch (e) {
-                console.error("Failed to load logo", e);
+                console.error("Failed to load settings in Navbar", e);
             }
         };
         fetchLogo();
@@ -69,10 +68,10 @@ export default function Navbar() {
     return (
         <nav className="fixed w-full z-50 bg-white/95 backdrop-blur-md shadow-sm border-b border-slate-100 dark:bg-slate-900/95 dark:border-slate-800 transition-all">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex justify-between items-center h-24">
+                <div className="flex justify-between items-center h-16">
                     {/* Logo */}
-                    <Link href="/" className="flex-shrink-0 group flex items-center gap-3">
-                        <div className="relative w-48 h-12 md:w-56 md:h-16">
+                    <Link href="/" className="flex-shrink-0 group flex items-center">
+                        <div className="relative w-36 h-10 md:w-48 md:h-12 gap-3">
                             <Image
                                 src={logoUrl}
                                 alt="SDK BATIMENT"
@@ -84,19 +83,30 @@ export default function Navbar() {
                     </Link>
 
                     {/* Desktop Menu */}
-                    <div className="hidden xl:flex items-center space-x-6">
+                    <div className="hidden lg:flex items-center space-x-4">
                         {navLinks.map((link) => (
                             <Link
                                 key={link.name}
                                 href={link.href}
-                                className="text-slate-600 hover:text-primary font-medium transition-colors text-sm uppercase tracking-wide py-2"
+                                className="text-slate-600 hover:text-primary font-medium transition-colors text-xs uppercase tracking-wide py-2 whitespace-nowrap"
                             >
                                 {link.name}
                             </Link>
                         ))}
 
                         {/* Auth Section Desktop */}
-                        <div className="pl-6 border-l border-slate-200 flex items-center gap-4">
+                        <div className="pl-4 border-l border-slate-200 flex items-center gap-3">
+                            <Link 
+                                href="/sdk-batiment-app.apk" 
+                                target="_blank"
+                                className="flex items-center gap-1.5 text-xs font-bold text-[#3DDC84] bg-green-50 hover:bg-green-100 px-2.5 py-1.5 rounded-lg transition-colors border border-green-200 whitespace-nowrap"
+                            >
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                                    <path d="M17.523 15.3414c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993.0004.5511-.4482.9997-.9993.9997zm-11.046 0c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993 0 .5511-.4482.9997-.9993.9997zm11.436-7.2843l1.9-3.292c.1132-.194.0475-.444-.1465-.5562-.194-.1122-.4444-.0475-.5562.1465l-1.927 3.3392C15.698 7.026 13.916 6.5771 12 6.5771s-3.698.449-5.1843 1.1176l-1.927-3.3392c-.1118-.194-.3619-.2587-.5562-.1465-.194.1122-.2597.3622-.1465.5562l1.9 3.292C3.1558 9.6105 1 12.569 1 16.0396V17h22v-.9604c0-3.4706-2.1558-6.4291-5.087-7.9825z"/>
+                                </svg>
+                                Android
+                            </Link>
+
                             {session ? (
                                 <div className="flex items-center gap-3">
                                     <Link
@@ -123,16 +133,16 @@ export default function Navbar() {
                             ) : (
                                 <Link
                                     href="/login"
-                                    className="bg-primary text-white px-5 py-2.5 rounded-lg hover:bg-primary-dark transition-all shadow-md shadow-blue-200 font-bold text-sm flex items-center gap-2"
+                                    className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition-all shadow-md shadow-blue-200 font-bold text-xs flex items-center gap-1.5 whitespace-nowrap"
                                 >
-                                    <LogIn size={16} /> Se connecter
+                                    <LogIn size={14} /> Se connecter
                                 </Link>
                             )}
                         </div>
                     </div>
 
                     {/* Mobile Menu Button */}
-                    <div className="xl:hidden flex items-center gap-4">
+                    <div className="lg:hidden flex items-center gap-4">
                         {/* Shortcuts Mobile */}
                         <Link href="/gallery" className="text-slate-600 hover:text-primary transition-colors p-2" aria-label="Galerie">
                             <ImageIcon size={24} />
@@ -167,7 +177,7 @@ export default function Navbar() {
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
-                        className="xl:hidden bg-white border-b border-slate-100 overflow-hidden dark:bg-slate-900 shadow-xl"
+                        className="lg:hidden bg-white border-b border-slate-100 overflow-hidden dark:bg-slate-900 shadow-xl"
                     >
                         <div className="px-4 pt-2 pb-6 space-y-2">
                             {navLinks.map((link) => (
@@ -180,7 +190,18 @@ export default function Navbar() {
                                     {link.name}
                                 </Link>
                             ))}
-                            <div className="border-t border-slate-100 mt-4 pt-4 px-4">
+                            <div className="border-t border-slate-100 mt-4 pt-4 px-4 space-y-2">
+                                <Link
+                                    href="/sdk-batiment-app.apk"
+                                    target="_blank"
+                                    onClick={() => setIsOpen(false)}
+                                    className="flex items-center justify-center gap-2 w-full py-3 bg-green-50 text-[#3DDC84] font-bold rounded-lg mb-2 border border-green-200 shadow-sm"
+                                >
+                                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                                        <path d="M17.523 15.3414c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993.0004.5511-.4482.9997-.9993.9997zm-11.046 0c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993 0 .5511-.4482.9997-.9993.9997zm11.436-7.2843l1.9-3.292c.1132-.194.0475-.444-.1465-.5562-.194-.1122-.4444-.0475-.5562.1465l-1.927 3.3392C15.698 7.026 13.916 6.5771 12 6.5771s-3.698.449-5.1843 1.1176l-1.927-3.3392c-.1118-.194-.3619-.2587-.5562-.1465-.194.1122-.2597.3622-.1465.5562l1.9 3.292C3.1558 9.6105 1 12.569 1 16.0396V17h22v-.9604c0-3.4706-2.1558-6.4291-5.087-7.9825z"/>
+                                    </svg>
+                                    Télécharger l'App Android
+                                </Link>
                                 {session ? (
                                     <>
                                         <Link

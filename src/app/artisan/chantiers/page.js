@@ -284,6 +284,7 @@ export default function MyChantiersPage() {
                                                         <div className="grid grid-cols-2 gap-2 text-sm">
                                                             <div><span className="text-slate-500 text-xs block">Surface</span> <span className="font-bold text-slate-800">{chantier.surface_sol || 0} m²</span></div>
                                                             <div><span className="text-slate-500 text-xs block">Support</span> <span className="font-bold text-slate-800">{chantier.support_type || '-'}</span></div>
+                                                            <div className="col-span-2 mt-2 pt-2 border-t border-slate-100 italic"><span className="text-slate-500 text-xs block uppercase font-bold tracking-tighter">Adresse Client</span> <span className="font-bold text-slate-800">{chantier.address || '-'}</span></div>
                                                         </div>
                                                     </div>
                                                     <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm">

@@ -58,6 +58,7 @@ const UserSchema = new mongoose.Schema({
     facebook: { type: String },
     instagram: { type: String },
     taxId: { type: String }, // Matricule Fiscale
+    cachet: { type: String }, // Digital stamp with transparent background
     fidelityRank: {
         type: String,
         enum: ['bronze', 'silver', 'gold']

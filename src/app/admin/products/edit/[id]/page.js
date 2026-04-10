@@ -50,7 +50,8 @@ export default function EditProductPage() {
         securite: '',
         point_fidelite: 0,
         images: [],
-        pdfUrl: ''
+        pdfUrl: '',
+        facebookPixelId: ''
     });
 
     useEffect(() => {
@@ -68,6 +69,7 @@ export default function EditProductPage() {
                         securite: p.securite ? p.securite.join('\n') : '',
                         images: p.images || [],
                         pdfUrl: p.pdf_url || '',
+                        facebookPixelId: p.facebookPixelId || '',
                         caracteristiques: p.caracteristiques || { aspect: '', rendement: '', temps_sechage: '', conditionnement: '' },
                         donnees_techniques: p.donnees_techniques || { couleur: '', densite: '', extrait_sec: '', limites_temperature: '' }
                     });
@@ -388,7 +390,26 @@ export default function EditProductPage() {
                     </div>
                 </div>
 
-                {/* --- 11. FICHIERS & MÉDIAS --- */}
+                {/* --- 11. FACEBOOK PIXEL --- */}
+                <div className="bg-white rounded-xl shadow-sm border border-blue-200 overflow-hidden">
+                    <div className="bg-blue-600 px-6 py-4 border-b border-blue-700">
+                        <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                            📊 Facebook Pixel (Produit spécifique)
+                        </h3>
+                    </div>
+                    <div className="p-6 space-y-2">
+                        <label className="text-sm font-bold text-slate-700">ID du Pixel Facebook</label>
+                        <input
+                            type="text"
+                            name="facebookPixelId"
+                            value={formData.facebookPixelId}
+                            onChange={handleChange}
+                            placeholder="Ex: 1234567890123456 (laisser vide pour désactiver)"
+                            className="w-full px-4 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500 outline-none font-mono"
+                        />
+                        <p className="text-xs text-slate-500">Ce pixel se déclenche en plus du pixel global quand un visiteur consulte cette fiche produit.</p>
+                    </div>
+                </div>
                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                     <div className="bg-slate-800 px-6 py-4 border-b border-slate-700">
                         <h3 className="text-lg font-bold text-white flex items-center gap-2">

@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, CheckCircle, Shield, Users, Wrench, ClipboardList, AlertCircle, CalendarCheck, Headphones, X, Send, Loader2, ChevronRight, Lightbulb, Heart, MessageCircle, Star, UploadCloud, Plus, Trash } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { trackFbEvent } from '@/utils/trackFbEvent';
 import LocationPicker from '@/components/LocationPicker';
 import NearbyArtisans from '@/components/NearbyArtisans';
 
@@ -83,6 +84,18 @@ export default function Home() {
 
   const removeImage = (index) => setSupportForm(prev => ({ ...prev, images: prev.images.filter((_, i) => i !== index) }));
 
+  // New InitiateCheckout Pixel handler (High Priority)
+  const handleSupportTypeSelect = (type) => {
+    setSupportType(type);
+    
+    // Track initiation (Browser + CAPI)
+    trackFbEvent('InitiateCheckout', {
+        content_name: type === 'diagnostic' ? 'Diagnostic Form Started' : type === 'reclamation' ? 'Réclamation Form Started' : 'Rendez-vous Form Started',
+        currency: 'TND',
+        value: 0.00
+    });
+  };
+
   const handleSupportSubmit = async (e) => {
     e.preventDefault();
     setSendingSupport(true);
@@ -102,11 +115,17 @@ export default function Home() {
       const data = await res.json();
 
       if (data.success) {
-        if (typeof window !== 'undefined' && window.fbq) {
-          window.fbq('track', 'Lead', {
-            content_name: supportType === 'diagnostic' ? 'Diagnostic Technique' : supportType === 'reclamation' ? 'Réclamation' : 'Rendez-vous',
-            surface: supportForm.surface
-          });
+        // Log Lead & Completion (Browser + CAPI)
+        trackFbEvent('Lead', {
+          content_name: supportType === 'diagnostic' ? 'Diagnostic Technique' : supportType === 'reclamation' ? 'Réclamation' : 'Rendez-vous',
+          surface: supportForm.surface
+        });
+
+        // Specific sub-event
+        if (supportType === 'rdv' || supportType === 'diagnostic') {
+          trackFbEvent('ScheduleAppointment', { content_name: supportType });
+        } else if (supportType === 'reclamation') {
+          trackFbEvent('Contact', { content_name: 'Réclamation' });
         }
         toast.success("Votre demande a bien été envoyée !");
         setSupportType(null);
@@ -236,21 +255,21 @@ export default function Home() {
             </div>
 
             <div className="w-full lg:w-auto grid grid-cols-3 gap-2 md:flex md:flex-row md:gap-3">
-              <button onClick={() => setSupportType('diagnostic')} className="bg-white hover:bg-blue-50 text-slate-800 p-2 md:p-4 rounded-xl shadow-lg border-2 border-transparent hover:border-blue-200 transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-3 w-full md:w-32 group h-full">
+              <button onClick={() => handleSupportTypeSelect('diagnostic')} className="bg-white hover:bg-blue-50 text-slate-800 p-2 md:p-4 rounded-xl shadow-lg border-2 border-transparent hover:border-blue-200 transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-3 w-full md:w-32 group h-full">
                 <div className="p-2 md:p-2.5 bg-blue-100 rounded-full text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300 shrink-0">
                   <ClipboardList size={20} className="md:w-[22px] md:h-[22px]" />
                 </div>
                 <span className="font-bold text-[10px] md:text-sm text-center leading-tight">Diagnostic<br />Technique</span>
               </button>
 
-              <button onClick={() => setSupportType('reclamation')} className="bg-white hover:bg-blue-50 text-slate-800 p-2 md:p-4 rounded-xl shadow-lg border-2 border-transparent hover:border-blue-200 transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-3 w-full md:w-32 group h-full">
+              <button onClick={() => handleSupportTypeSelect('reclamation')} className="bg-white hover:bg-blue-50 text-slate-800 p-2 md:p-4 rounded-xl shadow-lg border-2 border-transparent hover:border-blue-200 transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-3 w-full md:w-32 group h-full">
                 <div className="p-2 md:p-2.5 bg-red-100 rounded-full text-red-600 group-hover:bg-red-600 group-hover:text-white transition-colors duration-300 shrink-0">
                   <AlertCircle size={20} className="md:w-[22px] md:h-[22px]" />
                 </div>
                 <span className="font-bold text-[10px] md:text-sm text-center leading-tight">Réclamation<br />Service</span>
               </button>
 
-              <button onClick={() => setSupportType('rdv')} className="bg-white hover:bg-blue-50 text-slate-800 p-2 md:p-4 rounded-xl shadow-lg border-2 border-transparent hover:border-blue-200 transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-3 w-full md:w-32 group h-full">
+              <button onClick={() => handleSupportTypeSelect('rdv')} className="bg-white hover:bg-blue-50 text-slate-800 p-2 md:p-4 rounded-xl shadow-lg border-2 border-transparent hover:border-blue-200 transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-3 w-full md:w-32 group h-full">
                 <div className="p-2 md:p-2.5 bg-green-100 rounded-full text-green-600 group-hover:bg-green-600 group-hover:text-white transition-colors duration-300 shrink-0">
                   <CalendarCheck size={20} className="md:w-[22px] md:h-[22px]" />
                 </div>
@@ -373,7 +392,7 @@ export default function Home() {
             <span className="text-primary font-semibold uppercase tracking-wider text-xs">Nos Références</span>
             <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mt-2 mb-3">Dernières Réalisations</h2>
             <div className="w-16 h-1 bg-primary mx-auto rounded-full mb-4"></div>
-            <p className="text-slate-600 max-w-xl mx-auto text-sm md:text-base">Découvrez les projets récents réalisés par nos artisans partenaires avec les produits de notre partenaire certifié HORIZON CHIMIQUE.</p>
+            <p className="text-slate-600 max-w-xl mx-auto text-sm md:text-base">Découvrez les projets récents réalisés par nos partenaires artisans avec le support technique de <strong>HORIZON CHIMIQUE</strong>.</p>
           </div>
           <RealizationGrid />
 
@@ -574,7 +593,7 @@ function ProductGrid() {
             {product.images && product.images.length > 0 ? (
               <img src={product.images[0]} alt={product.designation} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
             ) : (
-              <div className="text-slate-300 font-bold text-2xl md:text-4xl select-none">HC</div>
+              <div className="text-slate-300 font-bold text-2xl md:text-4xl select-none">SDK</div>
             )}
             <div className="absolute top-2 right-2 md:top-3 md:right-3 bg-white/90 backdrop-blur text-primary text-[9px] md:text-[10px] font-bold px-1.5 py-0.5 md:px-2 md:py-0.5 rounded shadow-sm">
               Nouveau

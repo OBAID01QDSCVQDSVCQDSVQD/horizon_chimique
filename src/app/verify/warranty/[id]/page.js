@@ -17,10 +17,10 @@ async function getWarranty(id) {
             .populate('chantier', 'address clientName clientPhone')
             .populate({
                 path: 'artisan',
-                select: 'name email companyName phone parentGoldArtisan',
+                select: 'name email companyName phone parentGoldArtisan cachet',
                 populate: {
                     path: 'parentGoldArtisan',
-                    select: 'name email companyName phone'
+                    select: 'name email companyName phone cachet'
                 }
             })
             .lean();
@@ -116,23 +116,40 @@ export default async function VerifyWarrantyPage({ params }) {
                     {/* Artisan Info */}
                     <div>
                         <h3 className="text-sm font-bold text-primary uppercase mb-3 flex items-center gap-2">
-                            <UserIcon size={16} /> Applicateur Agréé
+                             <UserIcon size={16} /> Applicateur Agréé (Exécutant)
                         </h3>
                         {(() => {
-                            const displayArtisan = warranty.artisan?.parentGoldArtisan || warranty.artisan;
-                            const isChild = !!warranty.artisan?.parentGoldArtisan;
+                            const artisan = warranty.artisan;
+                            const parent = artisan?.parentGoldArtisan;
 
                             return (
-                                <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                                    <p className="font-bold text-slate-800 text-lg mb-1">
-                                        {displayArtisan?.companyName || displayArtisan?.name}
+                                <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 italic-parent">
+                                    <p className="font-bold text-slate-800 text-lg mb-1 uppercase tracking-tight">
+                                        {artisan?.companyName || artisan?.name}
                                     </p>
-                                    <p className="text-slate-500 text-sm">{displayArtisan?.email}</p>
-                                    {displayArtisan?.phone && <p className="text-slate-500 text-sm">{displayArtisan.phone}</p>}
+                                    <div className="space-y-0.5 text-slate-600 text-sm font-medium">
+                                        <p>{artisan?.email}</p>
+                                        {artisan?.phone && <p>{artisan.phone}</p>}
+                                    </div>
 
-                                    {isChild && (
-                                        <div className="mt-3 pt-3 border-t border-slate-200 text-xs text-slate-400 italic">
-                                            Projet exécuté par: <span className="font-bold text-slate-600">{warranty.artisan?.name}</span>
+                                    {parent && (
+                                        <div className="mt-3 pt-3 border-t border-slate-200 text-[11px] text-slate-400">
+                                            Membre du réseau : <span className="font-bold text-primary/70">{parent?.companyName || parent?.name}</span>
+                                        </div>
+                                    )}
+
+                                    {/* Artisan Cachet Stamp */}
+                                    {artisan?.cachet && (
+                                        <div className="mt-4 flex justify-center sm:justify-end">
+                                            <div className="relative">
+                                                <img 
+                                                    src={artisan.cachet} 
+                                                    alt="Cachet de l'Applicateur" 
+                                                    className="h-16 object-contain mix-blend-multiply opacity-90"
+                                                    style={{ transform: 'rotate(-2deg)' }}
+                                                />
+                                                <div className="absolute inset-0 border border-slate-200/50 rounded pointer-events-none"></div>
+                                            </div>
                                         </div>
                                     )}
                                 </div>
@@ -156,7 +173,7 @@ export default async function VerifyWarrantyPage({ params }) {
                             </div>
                             <div className="flex justify-between">
                                 <span className="text-slate-500 text-sm">Date d'effet</span>
-                                <span className="font-bold text-slate-800">{new Date(warranty.startDate).toLocaleDateString()}</span>
+                                <span className="font-bold text-slate-800">{new Date(warranty.startDate).toLocaleDateString('fr-FR')}</span>
                             </div>
                             {warranty.chantier?.address && (
                                 <div className="pt-2 border-t border-slate-100 mt-2">

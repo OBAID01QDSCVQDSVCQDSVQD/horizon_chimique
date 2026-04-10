@@ -20,25 +20,36 @@ export const authOptions = {
             credentials: {
                 identifier: { label: "Email ou Téléphone", type: "text" },
                 password: { label: "Mot de passe", type: "password" },
-                firebaseToken: { label: "Firebase Token", type: "text" }
+                otp: { label: "OTP Code", type: "text" },
+                phone: { label: "Téléphone", type: "text" }
             },
             async authorize(credentials) {
                 try {
-                    const { identifier, password, firebaseToken } = credentials;
+                    const { identifier, password, otp, phone: phoneCred } = credentials;
 
-                    // Case 1: Firebase SMS Authentication (Client + Artisan)
-                    if (firebaseToken) {
+                    // Case 4: Local SMS OTP (WinSMS.tn)
+                    if (otp && phoneCred) {
                         await dbConnect();
-                        const admin = (await import("@/lib/firebase-admin")).default;
-                        const decodedToken = await admin.auth().verifyIdToken(firebaseToken);
-                        const phone = decodedToken.phone_number;
+                        const OTP = (await import("@/models/OTP")).default;
+                        
+                        // Verification
+                        const record = await OTP.findOne({ phone: phoneCred, code: otp });
+                        if (!record) {
+                            throw new Error("Code de vérification incorrect ou expiré");
+                        }
+                        if (record.expiresAt < new Date()) {
+                            throw new Error("Code de vérification expiré");
+                        }
+
+                        // OTP is valid, find or create user
+                        const phone = phoneCred;
                         const phoneNorm = normalizePhone(phone);
 
                         let user = await User.findOne({ phone });
                         if (!user && phoneNorm) {
                             const allWithPhone = await User.find({ phone: { $exists: true, $ne: '' } }).select('_id phone');
                             const match = allWithPhone.find(u => normalizePhone(u.phone) === phoneNorm);
-                            if (match) user = await User.findById(match._id); // Récupérer l'utilisateur complet (role, name, etc.)
+                            if (match) user = await User.findById(match._id);
                         }
 
                         if (!user) {
@@ -52,12 +63,11 @@ export const authOptions = {
                             });
                         }
 
-                        if (user.status === 'rejected') {
-                            throw new Error("Votre compte a été désactivé.");
-                        }
-                        if (user.role === 'artisan' && user.status === 'pending') {
-                            throw new Error("Votre compte est en attente de validation.");
-                        }
+                        // Delete OTP once used
+                        await OTP.deleteMany({ phone });
+
+                        if (user.status === 'rejected') throw new Error("Votre compte a été désactivé.");
+                        if (user.role === 'artisan' && user.status === 'pending') throw new Error("Votre compte est en attente de validation.");
 
                         return {
                             id: user._id.toString(),

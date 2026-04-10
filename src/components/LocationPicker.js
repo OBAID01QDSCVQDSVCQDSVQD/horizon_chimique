@@ -1,28 +1,49 @@
 'use client';
 
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { GoogleMap, useLoadScript, MarkerF } from '@react-google-maps/api';
 import usePlacesAutocomplete, { getGeocode, getLatLng } from 'use-places-autocomplete';
-import { Loader2, MapPin, Navigation } from 'lucide-react';
+import { Loader2, MapPin, Navigation, Search } from 'lucide-react';
 
 const libraries = ['places'];
 
-export default function LocationPicker({ onLocationSelect }) {
+export default function LocationPicker({ onLocationSelect, initialLocation = null }) {
     const { isLoaded } = useLoadScript({
         googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
         libraries,
     });
 
-    const [selected, setSelected] = useState(null); // { lat, lng }
-    const [address, setAddress] = useState('');
-    const [mapCenter, setMapCenter] = useState({ lat: 36.8065, lng: 10.1815 }); // Default: Tunis
-    const [mode, setMode] = useState('map'); // 'map' or 'link'
-    const [manualLink, setManualLink] = useState('');
+    const [selected, setSelected] = useState(initialLocation);
+    const [address, setAddress] = useState(initialLocation?.address || '');
+    const [mapCenter, setMapCenter] = useState(initialLocation || { lat: 36.8065, lng: 10.1815 }); // Tunis
+    const [isLocating, setIsLocating] = useState(false);
 
-    // Call onLocationSelect to expose selected location to parent
     const updateParent = useCallback((pos, addr) => {
         if (onLocationSelect) onLocationSelect({ ...pos, address: addr });
     }, [onLocationSelect]);
+
+    // 1. IP-Based Auto Location (Instant, No permission needed)
+    useEffect(() => {
+        const detectLocationByIp = async () => {
+            if (initialLocation || selected) return; // Don't overwrite if manually set
+            
+            try {
+                const res = await fetch('https://ipapi.co/json/');
+                const data = await res.json();
+                if (data.latitude && data.longitude) {
+                    const pos = { lat: data.latitude, lng: data.longitude };
+                    const cityAddr = `${data.city}, ${data.region}, Tunisia`;
+                    setMapCenter(pos);
+                    setSelected(pos);
+                    setAddress(cityAddr);
+                    updateParent(pos, cityAddr);
+                }
+            } catch (err) {
+                console.error("IP detection failed", err);
+            }
+        };
+        detectLocationByIp();
+    }, [initialLocation, selected, updateParent]);
 
     // Search Component
     const PlacesAutocomplete = () => {
@@ -32,46 +53,49 @@ export default function LocationPicker({ onLocationSelect }) {
             setValue,
             suggestions: { status, data },
             clearSuggestions,
-        } = usePlacesAutocomplete({
-            requestOptions: {
-                // No country restriction to allow global search
-            },
-            debounce: 300,
-        });
+        } = usePlacesAutocomplete({ debounce: 300 });
 
-        const handleSelect = async (address) => {
-            setValue(address, false);
+        const handleSelect = async (desc) => {
+            setValue(desc, false);
             clearSuggestions();
-            setAddress(address);
+            setAddress(desc);
 
             try {
-                const results = await getGeocode({ address });
+                const results = await getGeocode({ address: desc });
                 const { lat, lng } = await getLatLng(results[0]);
                 const pos = { lat, lng };
                 setSelected(pos);
                 setMapCenter(pos);
-                updateParent(pos, address);
+                updateParent(pos, desc);
             } catch (error) {
                 console.error("Error: ", error);
             }
         };
 
         return (
-            <div className="relative mb-2 w-full">
-                <input
-                    value={value}
-                    onChange={(e) => setValue(e.target.value)}
-                    disabled={!ready}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary outline-none text-sm"
-                    placeholder="Rechercher un lieu... (Ex: Tunis, Monastir, Paris)"
-                />
+            <div className="relative mb-3 flex gap-2">
+                <div className="relative flex-1">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                        <Search size={16} />
+                    </div>
+                    <input
+                        value={value || address}
+                        onChange={(e) => {
+                            setValue(e.target.value);
+                            setAddress(e.target.value);
+                        }}
+                        disabled={!ready}
+                        className="w-full pl-9 pr-4 py-3 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-primary shadow-sm text-sm"
+                        placeholder="Rechercher ma ville ou adresse..."
+                    />
+                </div>
                 {status === "OK" && (
-                    <ul className="absolute z-50 bg-white border border-slate-200 w-full mt-1 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    <ul className="absolute z-[100] bg-white border border-slate-200 w-full top-full mt-1 rounded-xl shadow-2xl max-h-48 overflow-y-auto overflow-x-hidden">
                         {data.map(({ place_id, description }) => (
                             <li
                                 key={place_id}
                                 onClick={() => handleSelect(description)}
-                                className="px-4 py-2 hover:bg-slate-100 cursor-pointer text-sm text-slate-700"
+                                className="px-4 py-3 hover:bg-slate-50 cursor-pointer text-sm text-slate-700 border-b border-slate-50 last:border-0"
                             >
                                 {description}
                             </li>
@@ -82,175 +106,88 @@ export default function LocationPicker({ onLocationSelect }) {
         );
     };
 
-    // Current Location Logic with High Accuracy
-    const handleCurrentLocation = useCallback(() => {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                async (position) => {
-                    const pos = {
-                        lat: position.coords.latitude,
-                        lng: position.coords.longitude,
-                    };
-                    setMapCenter(pos);
-                    setSelected(pos);
-
-                    try {
-                        const results = await getGeocode({ location: pos });
-                        const addr = results[0]?.formatted_address || "Position GPS";
-                        setAddress(addr);
-                        updateParent(pos, addr);
-                    } catch (e) {
-                        updateParent(pos, "Position GPS");
-                    }
-                },
-                (err) => {
-                    console.log("Geolocation error or denied:", err);
-                },
-                {
-                    enableHighAccuracy: true,
-                    timeout: 10000,
-                    maximumAge: 0
+    const handleGpsLocation = () => {
+        if (!navigator.geolocation) return;
+        setIsLocating(true);
+        navigator.geolocation.getCurrentPosition(
+            async (pos) => {
+                const p = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                setSelected(p);
+                setMapCenter(p);
+                try {
+                    const res = await getGeocode({ location: p });
+                    const addr = res[0]?.formatted_address || "GPS Location";
+                    setAddress(addr);
+                    updateParent(p, addr);
+                } catch (e) {
+                    setAddress("GPS Location");
+                    updateParent(p, "GPS Location");
                 }
-            );
-        }
-    }, [updateParent]);
+                setIsLocating(false);
+            },
+            () => setIsLocating(false),
+            { enableHighAccuracy: false, timeout: 5000 }
+        );
+    };
 
-    // Auto-trigger on load
-    useEffect(() => {
-        if (isLoaded) {
-            handleCurrentLocation();
-        }
-    }, [isLoaded, handleCurrentLocation]);
-
-    const handleUpdatePosition = async (pos) => {
-        setSelected(pos);
+    const handleMarkerDragEnd = async (e) => {
+        const p = { lat: e.latLng.lat(), lng: e.latLng.lng() };
+        setSelected(p);
         try {
-            const results = await getGeocode({ location: pos });
-            const addr = results[0]?.formatted_address || "Position sélectionnée";
+            const res = await getGeocode({ location: p });
+            const addr = res[0]?.formatted_address || "Position sélectionnée";
             setAddress(addr);
-            updateParent(pos, addr);
+            updateParent(p, addr);
         } catch (error) {
-            updateParent(pos, "Position sélectionnée");
+            updateParent(p, address || "Point sélectionné");
         }
     };
 
-    const handleMapClick = (e) => {
-        const pos = { lat: e.latLng.lat(), lng: e.latLng.lng() };
-        handleUpdatePosition(pos);
-    };
-
-    const handleMarkerDragEnd = (e) => {
-        const pos = { lat: e.latLng.lat(), lng: e.latLng.lng() };
-        handleUpdatePosition(pos);
-    };
-
-    if (!isLoaded) return <div className="p-4 flex justify-center"><Loader2 className="animate-spin text-primary" /></div>;
-
-    const handleLinkChange = (e) => {
-        const link = e.target.value;
-        setManualLink(link);
-        // Treat the link as the address, lat/lng as 0 or null
-        if (link) updateParent({ lat: 0, lng: 0 }, link);
-    };
+    if (!isLoaded) return <div className="p-12 flex flex-col items-center gap-3 bg-slate-50 rounded-2xl"><Loader2 className="animate-spin text-primary" /><p className="text-xs text-slate-400">Chargement de la carte...</p></div>;
 
     return (
-        <div className="w-full">
-            <div className="flex gap-4 mb-3 text-sm">
+        <div className="w-full space-y-3">
+            <PlacesAutocomplete />
+            
+            <div className="relative h-64 w-full rounded-2xl overflow-hidden border border-slate-200 shadow-inner group">
+                <GoogleMap
+                    zoom={15}
+                    center={mapCenter}
+                    mapContainerClassName="w-full h-full"
+                    onClick={(e) => {
+                        const p = { lat: e.latLng.lat(), lng: e.latLng.lng() };
+                        setSelected(p);
+                        updateParent(p, address || "Point sélectionné");
+                    }}
+                    options={{
+                        disableDefaultUI: true,
+                        zoomControl: true,
+                        gestureHandling: 'greedy'
+                    }}
+                >
+                    {selected && (
+                        <MarkerF 
+                            position={selected} 
+                            draggable={true} 
+                            onDragEnd={handleMarkerDragEnd}
+                        />
+                    )}
+                </GoogleMap>
+
                 <button
                     type="button"
-                    onClick={() => setMode('map')}
-                    className={`font-bold ${mode === 'map' ? 'text-primary border-b-2 border-primary' : 'text-slate-500'}`}
+                    onClick={handleGpsLocation}
+                    className="absolute bottom-4 right-4 bg-primary text-white p-3 rounded-full shadow-2xl hover:bg-black transition-all active:scale-90 flex items-center gap-2 font-bold text-xs"
                 >
-                    Carte Interactive
-                </button>
-                <button
-                    type="button"
-                    onClick={() => setMode('link')}
-                    className={`font-bold ${mode === 'link' ? 'text-primary border-b-2 border-primary' : 'text-slate-500'}`}
-                >
-                    Lien Google Maps
+                    {isLocating ? <Loader2 className="animate-spin" size={16} /> : <Navigation size={16} />}
+                    {isLocating ? 'Détection...' : 'GPS'}
                 </button>
             </div>
 
-            {mode === 'map' ? (
-                <>
-                    <PlacesAutocomplete />
-
-                    <div className="relative h-64 w-full rounded-xl overflow-hidden border border-slate-300">
-                        <GoogleMap
-                            zoom={15}
-                            center={mapCenter}
-                            mapContainerClassName="w-full h-full"
-                            onClick={handleMapClick}
-                            options={{
-                                disableDefaultUI: false,
-                                zoomControl: true,
-                                streetViewControl: false,
-                                mapTypeControl: false,
-                            }}
-                        >
-                            {selected && (
-                                <MarkerF
-                                    position={selected}
-                                    draggable={true}
-                                    onDragEnd={handleMarkerDragEnd}
-                                />
-                            )}
-                        </GoogleMap>
-
-                        <button
-                            type="button"
-                            onClick={handleCurrentLocation}
-                            className="absolute bottom-4 right-4 bg-white p-2 rounded-full shadow-lg text-slate-700 hover:text-primary transition-colors"
-                            title="Actualiser ma position"
-                        >
-                            <Navigation size={20} />
-                        </button>
-                    </div>
-                    {address && (
-                        <div className="mt-2 text-xs text-slate-500 flex items-start gap-1">
-                            <MapPin size={14} className="mt-0.5 shrink-0" />
-                            {address}
-                        </div>
-                    )}
-                </>
-            ) : (
-                <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
-                    <p className="text-xs text-slate-600 mb-2">
-                        Si la carte ne fonctionne pas, ouvrez Google Maps, copiez le lien de votre position et collez-le ici.
-                    </p>
-                    <button
-                        type="button"
-                        onClick={() => {
-                            window.open('https://www.google.com/maps', 'GoogleMaps', 'width=600,height=800,menubar=no,toolbar=no,location=no,status=no');
-                        }}
-                        className="inline-flex items-center gap-2 text-blue-600 font-bold text-sm mb-2 hover:underline"
-                    >
-                        <MapPin size={16} /> Ouvrir Google Maps (Popup)
-                    </button>
-                    <div className="flex gap-2">
-                        <input
-                            type="url"
-                            value={manualLink}
-                            onChange={handleLinkChange}
-                            placeholder="Collez le lien ici (ex: https://maps.app.goo.gl/...)"
-                            className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary outline-none text-sm"
-                        />
-                        <button
-                            type="button"
-                            onClick={async () => {
-                                try {
-                                    const text = await navigator.clipboard.readText();
-                                    if (text) handleLinkChange({ target: { value: text } });
-                                } catch (err) {
-                                    alert('Veuillez coller manuellement (la permission a été refusée).');
-                                }
-                            }}
-                            className="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-3 py-2 rounded-lg text-sm transition-colors"
-                        >
-                            Coller
-                        </button>
-                    </div>
+            {address && (
+                <div className="flex items-center gap-2 p-3 bg-white border border-slate-100 rounded-xl text-xs text-slate-600 shadow-sm">
+                    <MapPin size={14} className="text-primary shrink-0" />
+                    <span className="font-bold truncate">{address}</span>
                 </div>
             )}
         </div>

@@ -22,6 +22,10 @@ export default {
                 },
                 surface: "#F8FAFC", // Light gray/white background
             },
+            fontFamily: {
+                sans: ['var(--font-inter)', 'var(--font-noto-arabic)', 'ui-sans-serif', 'system-ui'],
+                arabic: ['var(--font-noto-arabic)', 'sans-serif'],
+            },
             backgroundImage: {
                 'hero-pattern': "linear-gradient(to right bottom, #29ABE2, #0F78A8)",
             },

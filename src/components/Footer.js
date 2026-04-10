@@ -24,7 +24,8 @@ export default function Footer() {
                     setSettings(prev => ({
                         ...prev,
                         ...data.data,
-                        logoUrl: data.data.logoUrl || prev.logoUrl
+                        // Always use the hardcoded default logoUrl to prevent disappearing.
+                        logoUrl: prev.logoUrl
                     }));
                 }
             } catch (error) {
@@ -41,7 +42,7 @@ export default function Footer() {
                     {/* Brand */}
                     <div className="col-span-1">
                         <div className="mb-6 relative w-48 mx-auto md:mx-0 h-auto min-h-[64px] flex items-center justify-center md:justify-start">
-                            <Image src={settings.logoUrl} alt={settings.companyName} width={192} height={70} className="object-contain" />
+                            <Image src={settings.logoUrl} alt={settings.companyName} width={192} height={70} className="object-contain grayscale invert brightness-200 opacity-90" />
                         </div>
                         <p className="text-slate-400 mb-6 text-sm leading-relaxed">
                             Solutions innovantes d'étanchéité et de protection pour le bâtiment.

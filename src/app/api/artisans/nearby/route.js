@@ -28,20 +28,19 @@ export async function GET(req) {
         const lat = parseFloat(searchParams.get('lat'));
         const lng = parseFloat(searchParams.get('lng'));
 
-        if (!lat || !lng) {
-            return NextResponse.json({ success: false, message: 'Coordonnées requises' }, { status: 400 });
-        }
+        // If no coordinates, we'll still fetch all artisans but won't calculate distance
+        const hasLocation = lat && lng;
 
         // Fetch all artisans
         const artisans = await User.find({ role: 'artisan', status: 'approved' })
             .select('name image specialty companyName lastLocation phone address fidelityRank points')
             .lean();
 
-        // Calculate distance and sort
+        // Calculate distance and sort only if location is provided
         const nearbyArtisans = artisans
             .map(artisan => {
                 let distance = 99999;
-                if (artisan.lastLocation && artisan.lastLocation.lat) {
+                if (hasLocation && artisan.lastLocation && artisan.lastLocation.lat) {
                     distance = getDistanceFromLatLonInKm(
                         lat, lng,
                         artisan.lastLocation.lat, artisan.lastLocation.lng
@@ -49,11 +48,8 @@ export async function GET(req) {
                 }
                 return { ...artisan, distance: parseFloat(distance.toFixed(1)) };
             })
-            // Filter out those with no location (distance 99999) IF we want strictly nearby
-            // But maybe show all if few? Let's show only valid ones for "Nearby" feature
-            .filter(a => a.distance < 1000) // Within 1000km
-            .sort((a, b) => a.distance - b.distance)
-            .slice(0, 10); // Top 10
+            // Removed distance < 1000 filter to show ALL artisans globally
+            .sort((a, b) => a.distance - b.distance);
 
         return NextResponse.json({ success: true, artisans: nearbyArtisans });
 

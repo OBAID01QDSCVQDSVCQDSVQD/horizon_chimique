@@ -5,6 +5,7 @@ import dbConnect from "@/lib/db";
 import User from "@/models/User";
 import { Hammer, Wallet, PlusSquare, UserCircle, Briefcase, Image as ImageIcon, ScrollText, Calculator } from 'lucide-react';
 import Link from 'next/link';
+import LocationUpdater from '@/components/LocationUpdater';
 
 // Force dynamic rendering to ensure fresh point/rank data
 export const dynamic = 'force-dynamic';
@@ -53,6 +54,7 @@ export default async function ArtisanDashboard() {
 
     return (
         <div className="min-h-screen bg-slate-50 pb-20">
+            <LocationUpdater />
             {/* Header */}
             <div className="bg-slate-900 text-white pt-24 pb-12 px-4 relative overflow-hidden">
                 <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>

@@ -43,6 +43,7 @@ export async function GET(req) {
                 facebook: user.facebook || '',
                 instagram: user.instagram || '',
                 taxId: user.taxId || '',
+                cachet: user.cachet || '',
                 image: user.image || '',
                 lastLocation: user.lastLocation || null,
             }
@@ -61,7 +62,7 @@ export async function PUT(req) {
         }
 
         const data = await req.json();
-        const { name, companyName, address, bio, specialty, phone, whatsapp, website, facebook, instagram, taxId, password, email } = data;
+        const { name, companyName, address, bio, specialty, phone, whatsapp, website, facebook, instagram, taxId, cachet, password, email } = data;
 
         await dbConnect();
 
@@ -89,6 +90,7 @@ export async function PUT(req) {
         if (facebook !== undefined) updateData.facebook = facebook;
         if (instagram !== undefined) updateData.instagram = instagram;
         if (taxId !== undefined) updateData.taxId = taxId;
+        if (cachet !== undefined) updateData.cachet = cachet;
         if (taxId !== undefined) updateData.taxId = taxId;
         if (data.image !== undefined) updateData.image = data.image; // Profile Picture
         if (data.lastLocation !== undefined) updateData.lastLocation = data.lastLocation;

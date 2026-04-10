@@ -32,10 +32,33 @@ export async function generateMetadata({ params }) {
     await dbConnect();
     const solution = await Solution.findById(params.id);
     if (!solution) return { title: 'Solution introuvable' };
+    
+    const title = `${solution.title} | SDK Batiment`;
+    const description = "Découvrez notre solution technique d'étanchéité: " + solution.title;
+    
     return {
-        title: `${solution.title} - Horizon Chimique`,
-        description: solution.description.substring(0, 160)
-    }; // Simple fetch for meta
+        title,
+        description,
+        openGraph: {
+            title,
+            description,
+            url: `https://sdkbatiment.com/solutions/${params.id}`,
+            images: [
+                {
+                    url: '/logo.png',
+                    width: 1200,
+                    height: 630,
+                    alt: solution.title,
+                },
+            ],
+        },
+        twitter: {
+            card: 'summary_large_image',
+            title,
+            description,
+            images: ['/logo.png'],
+        },
+    };
 }
 
 // Helper to clean HTML (merge lists, remove empty p)

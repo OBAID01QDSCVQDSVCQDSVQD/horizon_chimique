@@ -14,8 +14,7 @@ export default function NearbyArtisans() {
 
     useEffect(() => {
         if (!navigator.geolocation) {
-            setError('Geolocation not supported');
-            setLoading(false);
+            fetchArtisans('', '');
             return;
         }
 
@@ -27,8 +26,8 @@ export default function NearbyArtisans() {
             },
             (err) => {
                 console.error("Geo error:", err);
-                setError('Impossible de récupérer votre position');
-                setLoading(false);
+                // Fallback: fetch all artisans without strict location
+                fetchArtisans('', '');
             }
         );
     }, []);
@@ -54,15 +53,7 @@ export default function NearbyArtisans() {
         }
     };
 
-    if (error) {
-        return (
-            <div className="py-8 max-w-6xl mx-auto px-4 text-center">
-                <p className="text-red-500 bg-red-50 p-3 rounded-lg inline-block text-sm">
-                    📍 {error}. Veuillez autoriser la localisation pour voir les experts.
-                </p>
-            </div>
-        );
-    }
+    // Removed the error blocking view, as we now fetch all artisans regardless of location permissions.
 
     if (loading) {
         return (
@@ -152,7 +143,7 @@ export default function NearbyArtisans() {
                             {/* Distance Badge */}
                             <div className="absolute top-4 right-4 text-slate-400 text-[10px] font-bold flex items-center gap-1 bg-slate-50 px-2.5 py-1 rounded-full border border-slate-100">
                                 <MapPin size={10} />
-                                {artisan.distance < 1 ? '< 1 km' : `${artisan.distance} km`}
+                                {artisan.distance >= 99990 ? 'National' : (artisan.distance < 1 ? '< 1 km' : `${artisan.distance} km`)}
                             </div>
 
                             {/* Avatar */}

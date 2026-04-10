@@ -1,0 +1,100 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "chatwoot-webhook",
+        "options": {}
+      },
+      "id": "1",
+      "name": "Chatwoot Webhook",
+      "type": "n8nio.nodes.webhook",
+      "typeVersion": 1,
+      "position": [400, 300]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4",
+        "messages": {
+          "messageValues": [
+            {
+              "role": "system",
+              "content": "Vous êtes l'assistant IA officiel de Horizon Chimique (SDK Batiment). Votre mission est d'aider les clients sur les produits d'étanchéité et d'imperméabilisation en Tunisie. Répondez de manière professionnelle en français ou arabe. Demandez toujours le numéro de téléphone pour un devis gratuit."
+            },
+            {
+              "role": "user",
+              "content": "={{$node[\"Chatwoot Webhook\"].json[\"content\"]}}"
+            }
+          ]
+        }
+      },
+      "id": "2",
+      "name": "OpenAI GPT-4",
+      "type": "n8nio.nodes.openAi",
+      "typeVersion": 1,
+      "position": [650, 300],
+      "credentials": {
+        "openAiApi": {
+          "id": "YOUR_OPENAI_CRED_ID"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://horizon-chatwoot.fly.dev/api/v1/accounts/2/conversations/{{$node[\"Chatwoot Webhook\"].json[\"conversation\"][\"id\"]}}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "ضع_هنا_التوكن_الخاص_بك"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "content",
+              "value": "={{$node[\"OpenAI GPT-4\"].json[\"choices\"][0][\"message\"][\"content\"]}}"
+            },
+            {
+              "name": "message_type",
+              "value": "outgoing"
+            }
+          ]
+        }
+      },
+      "id": "3",
+      "name": "Reply to Chatwoot",
+      "type": "n8nio.nodes.httpRequest",
+      "typeVersion": 4,
+      "position": [900, 300]
+    }
+  ],
+  "connections": {
+    "Chatwoot Webhook": {
+      "main": [
+        [
+          {
+            "node": "OpenAI GPT-4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI GPT-4": {
+      "main": [
+        [
+          {
+            "node": "Reply to Chatwoot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

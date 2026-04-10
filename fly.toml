@@ -7,6 +7,8 @@ app = 'horizon-chimique'
 primary_region = 'fra'
 
 [env]
+  NEXT_PUBLIC_APP_NAME = "SDK BATIMENT"
+  NEXT_PUBLIC_APP_DESCRIPTION = "L'Excellence en Étanchéité et Protection du Bâtiment"
   NEXT_PUBLIC_FIREBASE_API_KEY = "AIzaSyCpwJ8RQYAJPj8ktJsqGUJepLYS-Mszd5s"
   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN = "horizon-chimique.firebaseapp.com"
   NEXT_PUBLIC_FIREBASE_PROJECT_ID = "horizon-chimique"
@@ -21,6 +23,8 @@ primary_region = 'fra'
 
 [build]
   [build.args]
+    NEXT_PUBLIC_APP_NAME = "SDK BATIMENT"
+    NEXT_PUBLIC_APP_DESCRIPTION = "L'Excellence en Étanchéité et Protection du Bâtiment"
     NEXT_PUBLIC_GOOGLE_MAPS_API_KEY = "AIzaSyBsfH9z_Gor89idSC9grLZihOnsR2ByzRs"
     NEXT_PUBLIC_FIREBASE_API_KEY = "AIzaSyCpwJ8RQYAJPj8ktJsqGUJepLYS-Mszd5s"
     NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN = "horizon-chimique.firebaseapp.com"

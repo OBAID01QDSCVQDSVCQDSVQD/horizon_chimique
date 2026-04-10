@@ -259,26 +259,63 @@ export default function AdminWarrantyDetail() {
                         {/* HEADER */}
                         <div className="border-b-4 border-primary pb-6 mb-8 flex justify-between items-start">
                             <div className="w-1/2">
-                                {/* LOGO */}
-                                {company?.logoUrl ? (
-                                    <img src={company.logoUrl} alt={company.name} className="h-20 mb-3 object-contain" />
-                                ) : (
-                                    <h1 className="text-3xl font-black text-primary uppercase mb-2">{company?.name || 'ENTREPRISE'}</h1>
-                                )}
-
-                                <div className="text-xs text-slate-500 mt-2 leading-relaxed">
-                                    <strong className="text-slate-700 uppercase">{company?.name || 'Horizon Chimique'}</strong><br />
-                                    {company?.description || 'Solutions Techniques & Bâtiment'}<br />
-                                    <span className="block mt-1">
-                                        Siège Social: {company?.address || "Avenue de l'Indépendance, Tunis"}<br />
-                                        Tél: {company?.phone || '+216 71 000 000'} | Email: {company?.email || 'contact@horizon-chimique.tn'}
-                                    </span>
-                                </div>
+                                {/* Artisan Info - Matches the print page layout */}
+                                {(() => {
+                                    const artisan = warranty.artisan;
+                                    return (
+                                        <div className="flex gap-4 items-start text-left">
+                                            {artisan?.image ? (
+                                                <img src={artisan.image} alt={artisan.companyName} className="max-h-16 max-w-[120px] object-contain border border-slate-100 rounded" />
+                                            ) : (
+                                                <div className="h-14 w-14 bg-slate-50 border border-dashed border-slate-200 rounded flex items-center justify-center shrink-0">
+                                                    <ShieldCheck className="text-slate-200" size={20} />
+                                                </div>
+                                            )}
+                                            <div className="flex-1 min-w-0">
+                                                <h1 className="text-lg font-black text-slate-900 uppercase leading-tight mb-0.5 break-words">
+                                                    {artisan?.companyName || artisan?.name}
+                                                </h1>
+                                                <p className="text-[9px] font-bold text-primary uppercase tracking-wider mb-2 border-b-2 border-primary/20 pb-0.5 inline-block">Pro Certifié / Applicateur</p>
+                                                
+                                                <div className="text-[9px] text-slate-900 leading-snug space-y-0.5 font-sans">
+                                                    {artisan?.address && <p className="flex items-start gap-1"><span className="text-slate-900 font-bold shrink-0 uppercase w-10">Siège:</span> <span>{artisan.address}</span></p>}
+                                                    {artisan?.phone && <p className="flex items-start gap-1"><span className="text-slate-900 font-bold shrink-0 uppercase w-10">Tél:</span> <span>{artisan.phone}</span></p>}
+                                                    {artisan?.email && <p className="flex items-start gap-1"><span className="text-slate-900 font-bold shrink-0 uppercase w-10">Email:</span> <span>{artisan.email}</span></p>}
+                                                    {artisan?.taxId && <p className="flex items-start gap-1"><span className="text-slate-900 font-bold shrink-0 uppercase w-10">MF:</span> <span>{artisan.taxId}</span></p>}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
                             </div>
-                            <div className="text-right">
-                                <h1 className="text-3xl font-bold text-primary uppercase mb-2" style={{ fontFamily: 'Arial, sans-serif' }}>Certificat de Garantie</h1>
-                                <p className="font-mono text-lg font-bold text-slate-700">Ref: {formData.contractNumber}</p>
-                                <p className="text-sm text-slate-500">Date d'émission: {new Date().toLocaleDateString()}</p>
+
+                            <div className="text-right flex flex-col items-end min-w-[200px]">
+                                {/* Parent Logo or Horizon Logo */}
+                                <div className="flex flex-col items-end mb-4 border-b border-slate-200 pb-3 w-full">
+                                    {warranty.artisan?.parentGoldArtisan ? (
+                                        <div className="flex flex-col items-end gap-1">
+                                            <span className="text-[8px] font-black text-slate-900 uppercase tracking-widest">Membre du Réseau</span>
+                                            <img 
+                                                src={warranty.artisan.parentGoldArtisan.image || "/logo.png"} 
+                                                alt={warranty.artisan.parentGoldArtisan.companyName} 
+                                                className="max-h-12 max-w-[150px] object-contain" 
+                                            />
+                                            <span className="text-[7px] font-bold text-slate-900 uppercase tracking-widest mt-1">En Collaboration Avec HORIZON CHIMIQUE</span>
+                                        </div>
+                                    ) : (
+                                        <div className="flex flex-col items-end gap-1">
+                                            <span className="text-[8px] font-black text-slate-900 uppercase tracking-[0.2em] mb-1 text-right">En Collaboration Avec</span>
+                                            {company?.logoUrl ? (
+                                                <img src={company.logoUrl} alt={company.name} className="h-8 object-contain" />
+                                            ) : (
+                                                <span className="text-sm font-black text-primary uppercase">{company?.name || 'Horizon Chimique'}</span>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                                <h1 className="text-2xl font-bold text-primary uppercase mb-1" style={{ fontFamily: 'Arial, sans-serif' }}>Certificat de Garantie</h1>
+                                <p className="font-mono text-base font-bold text-slate-700">Ref: {formData.contractNumber} <span className="text-[10px] text-slate-900 font-normal ml-1 align-top">CLOUD-ID</span></p>
+                                <p className="text-xs text-slate-900 font-sans">Date d'émission: {new Date().toLocaleDateString('fr-FR')}</p>
                             </div>
                         </div>
 
@@ -292,75 +329,77 @@ export default function AdminWarrantyDetail() {
                                 {/* Client & Support Info */}
                                 <div className="grid grid-cols-2 gap-4 mb-4">
                                     <div>
-                                        <span className="block text-xs uppercase text-slate-500 font-sans">Client</span>
-                                        <span className="block font-bold text-lg">{warranty.chantier?.clientName || warranty.clientName}</span>
+                                        <span className="block text-xs uppercase text-slate-900 font-sans">Client</span>
+                                        <span className="block font-bold text-lg text-slate-900">{warranty.chantier?.clientName || warranty.clientName}</span>
                                     </div>
                                     <div>
-                                        <span className="block text-xs uppercase text-slate-500 font-sans">Téléphone</span>
-                                        <span className="block font-bold">{warranty.chantier?.clientPhone || warranty.clientPhone || '-'}</span>
+                                        <span className="block text-xs uppercase text-slate-900 font-sans">Téléphone</span>
+                                        <span className="block font-bold text-slate-900">{warranty.chantier?.clientPhone || warranty.clientPhone || '-'}</span>
+                                    </div>
+                                    <div className="col-span-2">
+                                        <span className="block text-xs uppercase text-slate-900 font-sans">Adresse</span>
+                                        <span className="block font-bold text-slate-900">{warranty.chantier?.address || '-'}</span>
                                     </div>
                                 </div>
 
-                                {/* Technical Surfaces */}
-                                <div className="grid grid-cols-3 gap-4 mb-4 border-t border-slate-200 pt-2">
-                                    {(warranty.chantier?.surface_sol > 0) && (
-                                        <div>
-                                            <span className="block text-xs uppercase text-slate-500 font-sans">Surface Sol</span>
-                                            <span className="block font-bold">{warranty.chantier.surface_sol} m²</span>
-                                        </div>
-                                    )}
-                                    {(warranty.chantier?.surface_murs > 0) && (
-                                        <div>
-                                            <span className="block text-xs uppercase text-slate-500 font-sans">Surface Murs</span>
-                                            <span className="block font-bold">{warranty.chantier.surface_murs} m²</span>
-                                        </div>
-                                    )}
-                                    {(warranty.chantier?.lineaire_acrotere > 0) && (
-                                        <div>
-                                            <span className="block text-xs uppercase text-slate-500 font-sans">Acrotère</span>
-                                            <span className="block font-bold">{warranty.chantier.lineaire_acrotere} ml</span>
-                                        </div>
-                                    )}
+                                {/* Technical Surfaces In one row */}
+                                <div className="flex justify-between items-center border-t border-slate-200 pt-1.5 mt-1.5 uppercase text-[8px] font-sans text-slate-900">
+                                    {warranty.chantier?.surface_sol > 0 && <span>Toiture: <b className="text-slate-900 ml-1">{warranty.chantier.surface_sol} m²</b></span>}
+                                    {warranty.chantier?.surface_murs > 0 && <span>Murs: <b className="text-slate-900 ml-1">{warranty.chantier.surface_murs} m²</b></span>}
+                                    {warranty.chantier?.lineaire_acrotere > 0 && <span>Acrotère: <b className="text-slate-900 ml-1">{warranty.chantier.lineaire_acrotere} ml</b></span>}
+                                    <span>Support: <b className="text-slate-900 ml-1">{warranty.chantier?.support_type || 'Béton'}</b></span>
                                 </div>
-
-                                {/* Products */}
-                                {warranty.chantier?.products && warranty.chantier.products.length > 0 && (
-                                    <div className="border-t border-slate-200 pt-2">
-                                        <span className="block text-xs uppercase text-slate-500 font-sans mb-1">Produits Utilisés</span>
-                                        <ul className="list-disc list-inside text-sm font-bold grid grid-cols-2 gap-x-4">
-                                            {warranty.chantier.products.map((p, i) => (
-                                                <li key={i}>{p.designation}</li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Terms */}
-                            <div className="grid grid-cols-2 gap-8">
-                                <div>
-                                    <h3 className="text-primary font-bold uppercase text-sm mb-4 border-b border-slate-200 pb-2">Applicateur Agréé</h3>
-                                    <p className="font-bold text-lg">{warranty.artisan?.name}</p>
-                                    <p className="text-sm text-slate-600">{warranty.artisan?.email}</p>
-                                </div>
-                                <div>
-                                    <h3 className="text-primary font-bold uppercase text-sm mb-4 border-b border-slate-200 pb-2">Période de Validité</h3>
-                                    <div className="flex justify-between items-center mb-1">
-                                        <span>Durée:</span>
-                                        <span className="font-bold">{warranty.duration}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span>Date de début:</span>
-                                        <span className="font-bold">{formData.startDate ? new Date(formData.startDate).toLocaleDateString() : 'Non définie'}</span>
-                                    </div>
-                                </div>
-                            </div>
+ 
+                                 {/* Products - Separate Section */}
+                                 {warranty.chantier?.products && warranty.chantier.products.length > 0 && (
+                                     <div className="border-t border-slate-200 pt-1.5 mt-1.5">
+                                         <span className="block text-[9px] uppercase text-primary font-bold mb-0.5">Produits Horizon Chimique Utilisés:</span>
+                                         <div className="text-[10px] text-slate-900 font-bold flex flex-wrap gap-x-3 gap-y-0.5 leading-tight">
+                                             {warranty.chantier.products.map((p, i) => (
+                                                 <span key={i} className="flex items-center gap-0.5"><span className="text-primary">•</span> {p.designation}</span>
+                                             ))}
+                                         </div>
+                                     </div>
+                                 )}
+                             </div>
+ 
+                             {/* Terms */}
+                             <div className="grid grid-cols-2 gap-8">
+                                 <div>
+                                     <h3 className="text-primary font-bold uppercase text-[9px] mb-2 border-b border-slate-200 pb-0.5 text-left">Applicateur Agréé</h3>
+                                     <p className="font-bold text-sm leading-tight text-slate-900">{warranty.artisan?.name}</p>
+                                     <p className="text-[10px] text-slate-900 font-sans truncate">{warranty.artisan?.email}</p>
+                                 </div>
+                                 <div>
+                                     <h3 className="text-primary font-bold uppercase text-[9px] mb-2 border-b border-slate-200 pb-0.5 text-left">Validité de Garantie</h3>
+                                     <div className="flex justify-between items-center text-[11px] font-sans">
+                                         <span className="text-slate-900 uppercase text-[9px]">Période:</span>
+                                         <span className="font-bold text-slate-900">{warranty.duration}</span>
+                                     </div>
+                                     <div className="flex justify-between items-center text-[11px] font-sans">
+                                         <span className="text-slate-900 uppercase text-[9px]">Début:</span>
+                                         <span className="font-bold text-primary">{formData.startDate ? new Date(formData.startDate).toLocaleDateString('fr-FR') : 'Non définie'}</span>
+                                     </div>
+                                 </div>
+                             </div>
 
                             {/* Coverage Text */}
-                            <div>
-                                <h3 className="text-primary font-bold uppercase text-sm mb-4 border-b border-slate-200 pb-2">Garantie & Couverture</h3>
-                                <div className="text-justify whitespace-pre-wrap">
+                            <div className="mt-2">
+                                <h3 className="text-primary font-bold uppercase text-[9px] border-b border-slate-200 pb-0.5 mb-1 text-left">La Garantie & ses Conditions</h3>
+                                <div className="text-justify whitespace-pre-wrap text-[11px] leading-relaxed text-slate-900">
                                     {formData.coverageDetails}
+                                </div>
+                                
+                                {/* Maintenance Recommendation Paragraph */}
+                                <div className="bg-primary/5 p-1.5 rounded-lg border border-primary/10 mt-1.5 text-justify">
+                                    <p className="text-[9px] items-center gap-1.5 text-primary/80 font-bold uppercase mb-0.5 flex">
+                                        <ShieldCheck size={10} /> Conseil de durabilité :
+                                    </p>
+                                    <p className="text-[10px] text-slate-900 italic leading-snug">
+                                        "Pour assurer la pérennité de votre étanchéité au-delà de la garantie, 
+                                        il est vivement recommandé de confier à un professionnel une visite de maintenance préventive 
+                                        tous les trois (3) ans. Ces interventions, réalisées à la charge du client, permettent de garantir la longévité maximale."
+                                    </p>
                                 </div>
                             </div>
 
@@ -368,7 +407,7 @@ export default function AdminWarrantyDetail() {
                             {formData.maintenanceVisits && formData.maintenanceVisits.length > 0 && (
                                 <div>
                                     <h3 className="text-primary font-bold uppercase text-sm mb-4 border-b border-slate-200 pb-2">Planning de Maintenance Obligatoire</h3>
-                                    <table className="w-full text-sm border-collapse">
+                                    <table className="w-full text-sm border-collapse text-slate-900">
                                         <thead>
                                             <tr className="bg-slate-100 print:bg-slate-50">
                                                 <th className="border p-2 text-left">Visite</th>
@@ -380,8 +419,8 @@ export default function AdminWarrantyDetail() {
                                             {formData.maintenanceVisits.filter(v => v.date).map((visit, i) => (
                                                 <tr key={i}>
                                                     <td className="border p-2">Visite de contrôle N°{i + 1}</td>
-                                                    <td className="border p-2 font-bold">{new Date(visit.date).toLocaleDateString()}</td>
-                                                    <td className={`border p-2 font-bold ${visit.status === 'completed' ? 'text-green-600' : visit.status === 'missed' ? 'text-red-500' : 'text-slate-400'}`}>
+                                                    <td className="border p-2 font-bold">{new Date(visit.date).toLocaleDateString('fr-FR')}</td>
+                                                    <td className={`border p-2 font-bold ${visit.status === 'completed' ? 'text-green-600' : visit.status === 'missed' ? 'text-red-500' : 'text-slate-900'}`}>
                                                         {getStatusLabel(visit.status)}
                                                     </td>
                                                 </tr>
@@ -397,7 +436,19 @@ export default function AdminWarrantyDetail() {
                         <div className="mt-12 pt-8 border-t border-slate-300">
                             <div className="grid grid-cols-2 gap-20">
                                 <div className="text-center">
-                                    <p className="font-bold mb-16">Signature de l'Applicateur</p>
+                                    <p className="font-bold mb-2">Signature de l'Applicateur</p>
+                                    <div className="h-24 flex items-center justify-center">
+                                        {warranty.artisan?.cachet ? (
+                                            <img 
+                                                src={warranty.artisan.cachet} 
+                                                alt="Cachet" 
+                                                className="max-h-24 object-contain mix-blend-multiply" 
+                                                style={{ transform: 'rotate(-2deg)' }}
+                                            />
+                                        ) : (
+                                            <div className="h-16"></div>
+                                        )}
+                                    </div>
                                     <div className="border-t border-slate-400 w-1/2 mx-auto"></div>
                                 </div>
                                 <div className="text-center">

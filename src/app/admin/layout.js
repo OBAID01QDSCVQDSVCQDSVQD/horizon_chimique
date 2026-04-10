@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import Link from 'next/link'; // Still used for NavItem if unrelated to Header
 import { Toaster } from 'react-hot-toast';
 import dbConnect from '@/lib/db';
@@ -11,7 +13,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from 'next/navigation';
 import AdminHeader from '../../components/admin/AdminHeader'; // Relative path to avoid alias issues
-import { Package, MessageSquare, LayoutDashboard, Settings, LogOut, Users, Trophy, Megaphone, Lightbulb, Mail, ShieldCheck, ClipboardList, ScrollText, Wrench, Bot, Image as ImageIcon } from 'lucide-react';
+import { Package, MessageSquare, LayoutDashboard, Settings, LogOut, Users, Trophy, Megaphone, Lightbulb, Mail, ShieldCheck, ClipboardList, ScrollText, Wrench, Bot, Image as ImageIcon, BarChart3 } from 'lucide-react';
 
 export default async function AdminLayout({ children }) {
     await dbConnect();
@@ -43,6 +45,7 @@ export default async function AdminLayout({ children }) {
 
                 <nav className="flex-1 py-6 px-3 space-y-1">
                     <NavItem href="/admin" icon={<LayoutDashboard size={20} />} label="Tableau de bord" />
+                    <NavItem href="/admin/analytics" icon={<BarChart3 size={20} />} label="Analytiques" />
                     <NavItem href="/admin/moderation" icon={<ShieldCheck size={20} />} label="Modération" badge={moderationCount} />
                     <NavItem href="/admin/products" icon={<Package size={20} />} label="Produits" />
                     <NavItem href="/admin/solutions" icon={<Lightbulb size={20} />} label="Solutions" />
@@ -70,7 +73,7 @@ export default async function AdminLayout({ children }) {
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col overflow-hidden">
                 {/* Admin Header (Client Component) */}
-                <AdminHeader user={user} pendingCount={pendingCount} unreadMessages={unreadMessages} pendingUsers={pendingUsers} pendingChantiers={pendingChantiers} moderationCount={moderationCount} />
+                <AdminHeader user={user} pendingCount={pendingCount} unreadMessages={unreadMessages} pendingUsers={pendingUsers} pendingChantiers={pendingChantiers} moderationCount={moderationCount} pendingRequests={pendingRequests} />
 
                 <main className="flex-1 overflow-auto bg-slate-50 dark:bg-slate-900 p-8 transition-colors duration-300">
                     {children}

@@ -47,7 +47,7 @@ export async function PUT(req, { params }) {
             // General Warranty details
             startDate, duration, maintenanceVisits,
             // Chantier Details
-            clientName, clientPhone, products, surface_sol, lineaire_acrotere, surface_murs, support_type
+            clientName, clientPhone, address, products, surface_sol, lineaire_acrotere, surface_murs, support_type
         } = body;
 
         const warranty = await Warranty.findOne({ _id: id, artisan: session.user.id });
@@ -60,6 +60,7 @@ export async function PUT(req, { params }) {
         if (chantier) {
             if (clientName) chantier.clientName = clientName;
             if (clientPhone) chantier.clientPhone = clientPhone;
+            if (address !== undefined) chantier.address = address;
             if (products) chantier.products = products;
             if (surface_sol !== undefined) chantier.surface_sol = surface_sol || 0;
             if (lineaire_acrotere !== undefined) chantier.lineaire_acrotere = lineaire_acrotere || 0;

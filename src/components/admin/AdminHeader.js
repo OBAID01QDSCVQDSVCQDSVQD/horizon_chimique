@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Sun, Moon, Bell, Search, Home, LogOut, Menu, X, Package, MessageSquare, LayoutDashboard, Settings, Users, Trophy, Megaphone, Lightbulb, Mail, ShieldCheck } from 'lucide-react';
+import { Sun, Moon, Bell, Search, Home, LogOut, Menu, X, Package, MessageSquare, LayoutDashboard, Settings, Users, Trophy, Megaphone, Lightbulb, Mail, ShieldCheck, BarChart3, ScrollText, Wrench, Image as ImageIcon, Bot, ClipboardList } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export default function AdminHeader({ user, pendingCount, unreadMessages = 0, pendingUsers = 0, pendingChantiers = 0, moderationCount = 0 }) {
+export default function AdminHeader({ user, pendingCount, unreadMessages = 0, pendingUsers = 0, pendingChantiers = 0, moderationCount = 0, pendingRequests = 0 }) {
     const [darkMode, setDarkMode] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const pathname = usePathname();
@@ -40,14 +40,20 @@ export default function AdminHeader({ user, pendingCount, unreadMessages = 0, pe
 
     const navItems = [
         { href: '/admin', icon: <LayoutDashboard size={20} />, label: 'Tableau de bord' },
+        { href: '/admin/analytics', icon: <BarChart3 size={20} />, label: 'Analytiques' },
         { href: '/admin/moderation', icon: <ShieldCheck size={20} />, label: 'Modération', badge: moderationCount },
         { href: '/admin/products', icon: <Package size={20} />, label: 'Produits' },
         { href: '/admin/solutions', icon: <Lightbulb size={20} />, label: 'Solutions' },
         { href: '/admin/users', icon: <Users size={20} />, label: 'Utilisateurs', badge: pendingUsers },
         { href: '/admin/messages', icon: <Mail size={20} />, label: 'Messagerie', badge: unreadMessages },
+        { href: '/admin/requests', icon: <ClipboardList size={20} />, label: 'Demandes Clients', badge: pendingRequests },
         { href: '/admin/chantiers', icon: <MessageSquare size={20} />, label: 'Chantiers', badge: pendingChantiers },
+        { href: '/admin/warranties', icon: <ScrollText size={20} />, label: 'Garanties' },
+        { href: '/admin/maintenance', icon: <Wrench size={20} />, label: 'Maintenance' },
         { href: '/admin/campaigns', icon: <Megaphone size={20} />, label: 'Campagnes' },
+        { href: '/admin/gallery', icon: <ImageIcon size={20} />, label: 'Galerie (CMS)' },
         { href: '/admin/settings/fidelity', icon: <Trophy size={20} />, label: 'Système Fidélité' },
+        { href: '/admin/ai-training', icon: <Bot size={20} />, label: 'AI Training Center' },
         { href: '/admin/settings', icon: <Settings size={20} />, label: 'Paramètres' },
     ];
 

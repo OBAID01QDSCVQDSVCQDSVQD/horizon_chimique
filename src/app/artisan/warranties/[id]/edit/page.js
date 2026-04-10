@@ -9,12 +9,17 @@ export default function EditWarrantyPage({ params }) {
     const router = useRouter();
     const { id } = params;
 
+    const toTitleCase = (str) => {
+        return str.replace(/\b\w/g, l => l.toUpperCase());
+    };
+
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
 
     const [formData, setFormData] = useState({
         clientName: '',
         clientPhone: '',
+        address: '',
         surface_sol: '',
         lineaire_acrotere: '',
         surface_murs: '',
@@ -52,6 +57,7 @@ export default function EditWarrantyPage({ params }) {
                     setFormData({
                         clientName: chantier.clientName || warranty.clientName || '',
                         clientPhone: chantier.clientPhone || warranty.clientPhone || '',
+                        address: chantier.address || '',
                         surface_sol: chantier.surface_sol || 0,
                         lineaire_acrotere: chantier.lineaire_acrotere || 0,
                         surface_murs: chantier.surface_murs || 0,
@@ -176,11 +182,15 @@ export default function EditWarrantyPage({ params }) {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label className="text-sm font-bold text-slate-700 mb-1 block">Nom du Client</label>
-                                    <input type="text" value={formData.clientName} onChange={(e) => setFormData({ ...formData, clientName: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 outline-none" required />
+                                    <input type="text" value={formData.clientName} onChange={(e) => setFormData({ ...formData, clientName: toTitleCase(e.target.value) })} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 outline-none" required />
                                 </div>
                                 <div>
                                     <label className="text-sm font-bold text-slate-700 mb-1 block">Téléphone Client</label>
                                     <input type="text" value={formData.clientPhone} onChange={(e) => setFormData({ ...formData, clientPhone: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 outline-none" required />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label className="text-sm font-bold text-slate-700 mb-1 block">Adresse du Client</label>
+                                    <input type="text" placeholder="Ex: Tunis, Centre Ville" value={formData.address} onChange={(e) => setFormData({ ...formData, address: toTitleCase(e.target.value) })} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 outline-none" />
                                 </div>
                             </div>
                         </div>

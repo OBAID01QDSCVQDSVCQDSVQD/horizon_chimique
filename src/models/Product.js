@@ -47,6 +47,7 @@ const ProductSchema = new mongoose.Schema({
     },
     images: [String],
     pdf_url: String,
+    facebookPixelId: { type: String, default: '' }, // Pixel ID spécifique au produit
 }, { timestamps: true });
 
 export default mongoose.models.Product || mongoose.model('Product', ProductSchema);
