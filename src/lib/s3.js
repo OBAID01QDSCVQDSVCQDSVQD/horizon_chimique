@@ -25,21 +25,23 @@ export async function uploadFile(buffer, fileName, contentType) {
 
     await s3Client.send(command);
 
+    const publicUrl = `https://${process.env.MINIO_ENDPOINT}/${bucketName}/${fileName}`;
+
     // If it's an image, return the imgproxy URL encoded in Base64
     if (contentType.startsWith('image/')) {
-        const s3Path = `s3://${bucketName}/${fileName}`;
-        // Base64 encode the S3 path and make it URL safe
-        const b64Path = Buffer.from(s3Path).toString('base64')
+        // Base64 encode the public direct URL for imgproxy
+        const b64Url = Buffer.from(publicUrl).toString('base64')
             .replace(/\+/g, '-')
             .replace(/\//g, '_')
             .replace(/=+$/, '');
             
-        return `https://imgproxy.sdkbatiment.com/insecure/${b64Path}.webp`;
+        return `https://imgproxy.sdkbatiment.com/insecure/${b64Url}.webp`;
     }
 
     // For other files (PDFs), return the direct MinIO URL
-    return `https://${process.env.MINIO_ENDPOINT}/${bucketName}/${fileName}`;
+    return publicUrl;
 }
+
 
 export default s3Client;
 
