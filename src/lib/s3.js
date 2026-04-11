@@ -25,11 +25,16 @@ export async function uploadFile(buffer, fileName, contentType) {
 
     await s3Client.send(command);
 
-    // If it's an image, return the imgproxy URL
+    // If it's an image, return the imgproxy URL encoded in Base64
     if (contentType.startsWith('image/')) {
         const s3Path = `s3://${bucketName}/${fileName}`;
-        // Using insecure path as per user's previous project style
-        return `https://imgproxy.sdkbatiment.com/insecure/plain/${s3Path}@webp`;
+        // Base64 encode the S3 path and make it URL safe
+        const b64Path = Buffer.from(s3Path).toString('base64')
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_')
+            .replace(/=+$/, '');
+            
+        return `https://imgproxy.sdkbatiment.com/insecure/${b64Path}.webp`;
     }
 
     // For other files (PDFs), return the direct MinIO URL
