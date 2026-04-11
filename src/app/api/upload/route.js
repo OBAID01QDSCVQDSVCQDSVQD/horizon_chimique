@@ -1,11 +1,5 @@
-import { v2 as cloudinary } from 'cloudinary';
 import { NextResponse } from 'next/server';
-
-cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+import { uploadFile } from '@/lib/s3';
 
 export async function POST(request) {
     try {
@@ -20,26 +14,18 @@ export async function POST(request) {
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
 
-        // Upload to Cloudinary
-        const result = await new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => reject(new Error("Timeout du serveur: Le ficher est trop lourd ou la connexion est lente")), 60000);
+        // Generate a unique filename
+        const timestamp = Date.now();
+        const originalName = file.name || 'upload';
+        const extension = originalName.split('.').pop();
+        const fileName = `uploads/${timestamp}-${Math.random().toString(36).substring(2, 7)}.${extension}`;
 
-            cloudinary.uploader.upload_stream(
-                {
-                    resource_type: "auto", // Works for images andpdfs
-                    folder: "horizon_chimique_products"
-                },
-                (error, result) => {
-                    clearTimeout(timeout);
-                    if (error) reject(error);
-                    else resolve(result);
-                }
-            ).end(buffer);
-        });
+        // Upload to MinIO
+        const fileUrl = await uploadFile(buffer, fileName, file.type);
 
-        return NextResponse.json({ success: true, url: result.secure_url });
+        return NextResponse.json({ success: true, url: fileUrl });
     } catch (error) {
         console.error("Upload Error:", error);
-        return NextResponse.json({ success: false, error: "Upload failed" }, { status: 500 });
+        return NextResponse.json({ success: false, error: "Upload failed: " + error.message }, { status: 500 });
     }
 }
