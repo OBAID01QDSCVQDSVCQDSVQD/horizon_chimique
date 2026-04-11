@@ -14,16 +14,11 @@ export function getImageUrl(fileName, width = 800, height = 600) {
     const endpoint = process.env.MINIO_ENDPOINT || "storage.sdkbatiment.com";
     const imgproxyUrl = "https://imgproxy.sdkbatiment.com";
     
-    // الرابط الأصلي الذي سيسحب منه imgproxy
-    const sourceUrl = `https://${endpoint}/${bucket}/${fileName}`;
+    // رابط اللوجو (الذي سنرفعه للباكت)
+    const watermarkUrl = `https://${endpoint}/${bucket}/logo.png`;
+    const b64Watermark = Buffer.from(watermarkUrl).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     
-    // تشفير الرابط بـ Base64 لضمان عدم حدوث مشاكل مع الشرطات (سواء في plain أو غيره)
-    const b64Url = Buffer.from(sourceUrl).toString('base64')
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=+$/, '');
-    
-    // نرجع الرابط مع خيار الـ resize والتحويل لـ webp والـ fit
-    // الترتيب: /insecure/خيارات/المصدر.webp
-    return `${imgproxyUrl}/insecure/rs:fit:${width}:${height}/q:80/${b64Url}.webp`;
+    // نرجع الرابط مع خيار الـ resize والـ watermark والتحويل لـ webp
+    // wm:0.3:ce:0:0:0.2  (شفافية 0.3، مركز ce، إزاحة 0، حجم 20%)
+    return `${imgproxyUrl}/insecure/rs:fit:${width}:${height}/q:80/wm:0.3:ce:0:0:0.2/plain/${sourceUrl}@webp`;
 }
