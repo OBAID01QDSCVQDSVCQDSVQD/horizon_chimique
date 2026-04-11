@@ -18,6 +18,10 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'storage.sdkbatiment.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'imgproxy.sdkbatiment.com',
+      },
     ],
   },
 
