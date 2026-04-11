@@ -1,4 +1,5 @@
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { getImageUrl } from './imgproxy';
 
 const s3Client = new S3Client({
     endpoint: `https://${process.env.MINIO_ENDPOINT}`,
@@ -18,29 +19,21 @@ export async function uploadFile(buffer, fileName, contentType) {
         Key: fileName,
         Body: buffer,
         ContentType: contentType,
-        // Remove ACL: 'public-read' as imgproxy will access via S3 keys internally
-        // or keep if direct access is still needed. We'll leave it for direct fallback.
         ACL: 'public-read',
     });
 
     await s3Client.send(command);
 
-    const publicUrl = `https://${process.env.MINIO_ENDPOINT}/${bucketName}/${fileName}`;
-
-    // If it's an image, return the imgproxy URL encoded in Base64
+    // If it's an image, return the optimized imgproxy URL
     if (contentType.startsWith('image/')) {
-        // Base64 encode the public direct URL for imgproxy
-        const b64Url = Buffer.from(publicUrl).toString('base64')
-            .replace(/\+/g, '-')
-            .replace(/\//g, '_')
-            .replace(/=+$/, '');
-            
-        return `https://imgproxy.sdkbatiment.com/insecure/${b64Url}.webp`;
+        // Return optimized URL from MinIO path
+        return getImageUrl(fileName);
     }
 
     // For other files (PDFs), return the direct MinIO URL
-    return publicUrl;
+    return `https://${process.env.MINIO_ENDPOINT}/${bucketName}/${fileName}`;
 }
+
 
 
 export default s3Client;
