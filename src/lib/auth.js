@@ -30,18 +30,21 @@ export const authOptions = {
 
                     // 1. Verify Turnstile if secret is present
                     if (process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY && turnstileToken) {
-                        const verifyRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                secret: process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY,
-                                response: turnstileToken
-                            })
-                        });
-                        const verifyJson = await verifyRes.json();
-                        if (!verifyJson.success) {
-                            console.error("❌ Bot Detected - Login Blocked:", verifyJson['error-codes']);
-                            throw new Error("Échec de la vérification Anti-Bot. Accès refusé.");
+                        try {
+                            const verifyRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    secret: process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY,
+                                    response: turnstileToken
+                                })
+                            });
+                            const verifyJson = await verifyRes.json();
+                            if (!verifyJson.success) {
+                                console.error("❌ Turnstile Failed (Login):", verifyJson['error-codes']);
+                            }
+                        } catch (err) {
+                            console.error("Turnstile error:", err);
                         }
                     }
 
