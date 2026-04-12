@@ -8,10 +8,17 @@ import { Loader2, MapPin, Navigation, Search } from 'lucide-react';
 const libraries = ['places'];
 
 export default function LocationPicker({ onLocationSelect, initialLocation = null }) {
-    const { isLoaded } = useLoadScript({
+    const { isLoaded, loadError } = useLoadScript({
         googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
         libraries,
     });
+
+    useEffect(() => {
+        if (loadError) {
+            console.error("Google Maps Load Error:", loadError);
+        }
+    }, [loadError]);
+
 
     const [selected, setSelected] = useState(initialLocation);
     const [address, setAddress] = useState(initialLocation?.address || '');
