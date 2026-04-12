@@ -19,6 +19,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const siteName = "SDK Batiment";
 
   return {
+    metadataBase: new URL(url),
     title: { 
       template: "%s | SDK Batiment", 
       default: "SDK Batiment - Étanchéité & Imperméabilisation Tunisie" 
