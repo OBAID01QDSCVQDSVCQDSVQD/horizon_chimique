@@ -150,7 +150,20 @@ export default function LocationPicker({ onLocationSelect, initialLocation = nul
         }
     };
 
+    if (loadError) return (
+        <div className="p-8 flex flex-col items-center gap-3 bg-red-50 rounded-2xl border border-red-100 text-center">
+            <p className="text-sm text-red-600 font-bold">عذراً، الخريطة لم تفتح!</p>
+            <p className="text-[10px] text-red-400 bg-white p-2 rounded border border-red-50 font-mono">
+                Error Trace: {loadError.message || "Unknown API Error"}
+            </p>
+            <p className="text-[10px] text-slate-500 mt-2">
+                يرجى التأكد من تفعيل (Maps JavaScript API) و (Places API) في لوحة تحكم جوجل.
+            </p>
+        </div>
+    );
+
     if (!isLoaded) return <div className="p-12 flex flex-col items-center gap-3 bg-slate-50 rounded-2xl"><Loader2 className="animate-spin text-primary" /><p className="text-xs text-slate-400">Chargement de la carte...</p></div>;
+
 
     return (
         <div className="w-full space-y-3">
