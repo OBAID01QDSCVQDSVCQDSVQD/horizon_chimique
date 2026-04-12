@@ -72,15 +72,30 @@ export const authOptions = {
                             throw new Error("Code OTP invalide ou expiré");
                         }
 
+                        const simpleDigits = phoneCred.replace(/\D/g, '');
+                        const tunisDigits = simpleDigits.length === 8 ? simpleDigits : (simpleDigits.startsWith('216') ? simpleDigits.slice(3) : simpleDigits);
+
                         let user = await User.findOne({ 
                             $or: [
                                 { phone: normalized },
-                                { phone: phoneCred }
+                                { phone: phoneCred },
+                                { phone: simpleDigits },
+                                { phone: tunisDigits },
+                                { phone: '00' + normalized },
+                                { phone: '+' + normalized }
                             ]
                         });
 
                         if (!user) {
-                            throw new Error("Aucun utilisateur trouvé avec ce numéro. Veuillez vous inscrire.");
+                            // Auto-register new user
+                            user = await User.create({
+                                name: `Utilisateur ${normalized.slice(-8)}`,
+                                phone: normalized,
+                                role: 'client',
+                                isVerified: true,
+                                status: 'approved'
+                            });
+                            console.log("🆕 New user registered automatically via OTP:", normalized);
                         }
 
                         // Consommer l'OTP

@@ -45,7 +45,10 @@ export async function POST(req) {
 
         await dbConnect();
 
-        let phone = reqPhone || identifier || '';
+        let rawPhone = reqPhone || identifier || '';
+        let phone = rawPhone.replace(/\D/g, '').length === 8 && /^[2459]/.test(rawPhone.replace(/\D/g, '')) 
+            ? '216' + rawPhone.replace(/\D/g, '') 
+            : rawPhone.replace(/\D/g, '');
         let email = reqEmail || '';
 
         // Verification for Client role (WinSMS OTP)
