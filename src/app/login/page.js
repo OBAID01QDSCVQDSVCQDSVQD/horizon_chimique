@@ -289,7 +289,7 @@ export default function LoginPage() {
                                             {/* SMS Turnstile (بعد إدخال OTP) */}
                                             <div className="flex justify-center py-2">
                                                 <Turnstile
-                                                    siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
+                                                    siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || process.env.NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY}
                                                     onSuccess={(token) => setTurnstileToken(token)}
                                                     options={{ theme: 'light' }}
                                                 />
