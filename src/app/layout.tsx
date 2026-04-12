@@ -89,7 +89,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           dangerouslySetInnerHTML={{
             __html: `
               (function(d,t) {
-                var BASE_URL="http://chatwoot-dqw3w94hvp5diqrdqdfgb22w.173.249.48.69.sslip.io";
+                var BASE_URL="https://chat.sdkbatiment.com";
                 var g=d.createElement(t),s=d.getElementsByTagName(t)[0];
                 g.src=BASE_URL+"/packs/js/sdk.js";
                 g.defer = true;
@@ -103,6 +103,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   })
                 }
               })(document,"script");
+
             `
           }}
         />
