@@ -97,10 +97,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 s.parentNode.insertBefore(g,s);
                 window.chatwootSettings = {
                   position: 'right',
-                  type: 'standard',
-                  launcherTitle: 'Besoin d’aide ?',
+                  type: 'standard', // Use standard to keep it cleaner
+                  launcherTitle: 'Aide',
                   darkMode: 'auto',
-                  hideMessageBubble: false,
+                  useBrowserHistory: false,
                   showPopout: false,
                 };
                 g.onload=function(){
