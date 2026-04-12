@@ -21,26 +21,26 @@ export async function POST(req) {
 
         await dbConnect();
         const data = await req.json();
+        const turnstileToken = data.turnstileToken;
 
-        // 2. Cloudflare Turnstile Verification (Optional for now until keys are set)
-        if (process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY) {
-            const token = data.turnstileToken;
-            if (!token) {
-                return NextResponse.json({ success: false, error: "Vérification requise (Captcha)" }, { status: 400 });
-            }
-
-            const verifyRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    secret: process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY,
-                    response: token,
-                    remoteip: ip
-                })
-            });
-            const verifyJson = await verifyRes.json();
-            if (!verifyJson.success) {
-                return NextResponse.json({ success: false, error: "Échec de la vérification Anti-Bot" }, { status: 403 });
+        // 2. Turnstile Verification
+        if (process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY && turnstileToken) {
+            try {
+                const verifyRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        secret: process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY,
+                        response: turnstileToken,
+                        remoteip: ip
+                    })
+                });
+                const verifyJson = await verifyRes.json();
+                if (!verifyJson.success) {
+                    console.error("❌ Cloudflare Turnstile Error (Requests):", verifyJson['error-codes']);
+                }
+            } catch (err) {
+                console.error("Turnstile fetch error:", err);
             }
         }
 

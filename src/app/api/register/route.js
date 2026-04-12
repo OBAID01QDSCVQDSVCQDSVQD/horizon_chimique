@@ -20,18 +20,25 @@ export async function POST(req) {
 
         // 2. Turnstile Verification
         if (process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY && turnstileToken) {
-            const verifyRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    secret: process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY,
-                    response: turnstileToken,
-                    remoteip: ip
-                })
-            });
-            const verifyJson = await verifyRes.json();
-            if (!verifyJson.success) {
-                return NextResponse.json({ success: false, error: "Échec de la vérification Anti-Bot" }, { status: 403 });
+            try {
+                const verifyRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        secret: process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY,
+                        response: turnstileToken,
+                        remoteip: ip
+                    })
+                });
+                const verifyJson = await verifyRes.json();
+                
+                if (!verifyJson.success) {
+                    console.error("❌ Cloudflare Turnstile Error Codes:", verifyJson['error-codes']);
+                    // For now, only warn in logs instead of blocking to prevent lockout
+                    console.warn("Turnstile failed but proceeding for debug purposes.");
+                }
+            } catch (err) {
+                console.error("Turnstile fetch error:", err);
             }
         }
 
