@@ -28,6 +28,30 @@ export const authOptions = {
                 try {
                     const { identifier, password, otp, phone: phoneCred, turnstileToken } = credentials;
 
+                    // 1. Verify Turnstile if secret is present
+                    if (process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY) {
+                        if (!turnstileToken) {
+                            console.warn("Turnstile: Login attempt without token.");
+                            throw new Error("Vérification Anti-Bot manquante. Merci d'actualiser la page.");
+                        }
+
+                        const verifyRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                secret: process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY,
+                                response: turnstileToken
+                            })
+                        });
+                        
+                        const verifyJson = await verifyRes.json();
+                        
+                        if (!verifyJson.success) {
+                            console.error("Turnstile: Verification failed.", verifyJson['error-codes']);
+                            throw new Error("Échec de la vérification Anti-Bot. Veuillez réessayer.");
+                        }
+                    }
+
                     // Case 4: Local SMS OTP (WinSMS.tn)
                     if (otp && phoneCred) {
                         await dbConnect();
