@@ -65,7 +65,7 @@ export const authOptions = {
                         const otpEntry = await OTP.findOne({ 
                             phone: normalized, 
                             code: otp,
-                            expires: { $gt: new Date() }
+                            expiresAt: { $gt: new Date() }
                         });
 
                         if (!otpEntry) {

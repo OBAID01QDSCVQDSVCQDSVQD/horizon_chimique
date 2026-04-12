@@ -16,15 +16,20 @@ export async function POST(req) {
     const { success: hrOk } = await rateLimit(`otp_hr_${ip}`, 10, 3600);
     if (!hrOk) return NextResponse.json({ error: 'Limite horaire atteinte pour les SMS.' }, { status: 429 });
 
-    const { phone } = await req.json();
-    if (!phone) return NextResponse.json({ error: 'Numéro de téléphone requis' }, { status: 400 });
+    const { phone: rawPhone } = await req.json();
+    if (!rawPhone) return NextResponse.json({ error: 'Numéro de téléphone requis' }, { status: 400 });
+
+    // Normalize phone for consistency (216XXXXXXXX)
+    const phone = rawPhone.replace(/\D/g, '').length === 8 && /^[2459]/.test(rawPhone.replace(/\D/g, '')) 
+        ? '216' + rawPhone.replace(/\D/g, '') 
+        : rawPhone.replace(/\D/g, '');
 
     // 1. Generate 6-digit code
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 mins
     
     console.log(`\n================================`);
-    console.log(`🔑 CODE OTP (POUR TEST) : ${code}`);
+    console.log(`🔑 CODE OTP (POUR TEST) : ${code} | PHONE: ${phone}`);
     console.log(`================================\n`);
 
     await runWithMongoRetry(async () => {
