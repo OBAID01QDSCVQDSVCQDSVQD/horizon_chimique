@@ -17,32 +17,8 @@ export const compressImage = async (file, quality = 0.8) => {
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-                // Add Watermark
-                try {
-                    const watermark = new Image();
-                    watermark.src = '/watermark.png';
-                    await new Promise((res) => {
-                        watermark.onload = res;
-                        watermark.onerror = res; // Proceed even if watermark fails
-                    });
+                /* Watermarking is now handled by imgproxy on the server */
 
-                    if (watermark.complete && watermark.naturalWidth > 0) {
-                        // Calculate watermark size (e.g., 30% of main image width)
-                        const wmWidth = canvas.width * 0.3;
-                        const wmHeight = (watermark.height / watermark.width) * wmWidth;
-                        
-                        // Center of the image
-                        const x = (canvas.width - wmWidth) / 2;
-                        const y = (canvas.height - wmHeight) / 2;
-
-                        // Transparency
-                        ctx.globalAlpha = 0.15;
-                        ctx.drawImage(watermark, x, y, wmWidth, wmHeight);
-                        ctx.globalAlpha = 1.0;
-                    }
-                } catch (e) {
-                    console.error("Watermark failed, skipping...", e);
-                }
 
                 // Compress
                 canvas.toBlob(
