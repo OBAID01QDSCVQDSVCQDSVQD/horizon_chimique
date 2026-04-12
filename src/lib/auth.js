@@ -3,15 +3,36 @@ import bcrypt from "bcryptjs";
 import dbConnect from "@/lib/db";
 import User from "@/models/User";
 
-// Normalise le numéro pour comparaison (ex: +216 96 138 290 et +21696138290 -> même clé)
+// Normalise le numéro pour comparaison
 function normalizePhone(p) {
     if (!p || typeof p !== 'string') return '';
     const digits = p.replace(/\D/g, '');
-    if (digits.length === 8 && /^[2459]/.test(digits)) return '216' + digits; // 2/4/5/9 (TT, Orange, Ooredoo...) -> 216
+    if (digits.length === 8 && /^[2459]/.test(digits)) return '216' + digits;
     if (digits.startsWith('216')) return digits;
     if (digits.startsWith('0')) return '216' + digits.slice(1);
     return digits;
 }
+
+const verifyTurnstile = async (token) => {
+    const secretKey = process.env.TURNSTILE_SECRET_KEY || process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY;
+    if (!secretKey) return true; // Skip if no secret key configured
+
+    try {
+        const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                secret: secretKey,
+                response: token
+            })
+        });
+        const data = await res.json();
+        return data.success;
+    } catch (err) {
+        console.error("Turnstile verification error:", err);
+        return false;
+    }
+};
 
 export const authOptions = {
     providers: [
@@ -28,24 +49,11 @@ export const authOptions = {
                 try {
                     const { identifier, password, otp, phone: phoneCred, turnstileToken } = credentials;
 
-                    // 1. Verify Turnstile if secret is present
-                    if (process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY && turnstileToken) {
-                        try {
-                            const verifyRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                    secret: process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY,
-                                    response: turnstileToken
-                                })
-                            });
-                            const verifyJson = await verifyRes.json();
-                            if (!verifyJson.success) {
-                                console.error("❌ Turnstile Failed (Login):", verifyJson['error-codes']);
-                            }
-                        } catch (err) {
-                            console.error("Turnstile error:", err);
-                        }
+                    // 1. Verify Turnstile (Strict Blocking)
+                    const isHuman = await verifyTurnstile(turnstileToken);
+                    if (!isHuman) {
+                        console.error("❌ Bot Detected - Login Blocked");
+                        throw new Error("Échec de la vérification Anti-Bot. Accès refusé.");
                     }
 
                     // Case 4: Local SMS OTP (WinSMS.tn)
@@ -53,148 +61,68 @@ export const authOptions = {
                         await dbConnect();
                         const OTP = (await import("@/models/OTP")).default;
                         
-                        // Verification
-                        const record = await OTP.findOne({ phone: phoneCred, code: otp });
-                        if (!record) {
-                            throw new Error("Code de vérification incorrect ou expiré");
-                        }
-                        if (record.expiresAt < new Date()) {
-                            throw new Error("Code de vérification expiré");
+                        const normalized = normalizePhone(phoneCred);
+                        const otpEntry = await OTP.findOne({ 
+                            phone: normalized, 
+                            code: otp,
+                            expires: { $gt: new Date() }
+                        });
+
+                        if (!otpEntry) {
+                            throw new Error("Code OTP invalide ou expiré");
                         }
 
-                        // OTP is valid, find or create user
-                        const phone = phoneCred;
-                        const phoneNorm = normalizePhone(phone);
-
-                        let user = await User.findOne({ phone });
-                        if (!user && phoneNorm) {
-                            const allWithPhone = await User.find({ phone: { $exists: true, $ne: '' } }).select('_id phone');
-                            const match = allWithPhone.find(u => normalizePhone(u.phone) === phoneNorm);
-                            if (match) user = await User.findById(match._id);
-                        }
+                        let user = await User.findOne({ 
+                            $or: [
+                                { phone: normalized },
+                                { phone: phoneCred }
+                            ]
+                        });
 
                         if (!user) {
-                            const dummyPassword = await bcrypt.hash(Math.random().toString(36), 10);
-                            user = await User.create({
-                                name: `Utilisateur ${phone.slice(-4)}`,
-                                phone: phone,
-                                role: 'client',
-                                status: 'approved',
-                                password: dummyPassword
-                            });
+                            throw new Error("Aucun utilisateur trouvé avec ce numéro. Veuillez vous inscrire.");
                         }
 
-                        // Delete OTP once used
-                        await OTP.deleteMany({ phone });
-
-                        if (user.status === 'rejected') throw new Error("Votre compte a été désactivé.");
-                        if (user.role === 'artisan' && user.status === 'pending') throw new Error("Votre compte est en attente de validation.");
+                        // Consommer l'OTP
+                        await OTP.deleteOne({ _id: otpEntry._id });
 
                         return {
                             id: user._id.toString(),
                             name: user.name,
                             email: user.email,
                             role: user.role,
-                            image: user.image,
-                            companyName: user.companyName,
+                            phone: user.phone,
+                            isVerified: user.isVerified
                         };
                     }
 
-                    // Case 2: Impersonation (Admin se connecte en tant qu'un utilisateur)
-                    if (identifier && password && password.startsWith('IMPERSONATE:')) {
-                        const token = password.slice('IMPERSONATE:'.length);
-                        await dbConnect();
-                        const user = await User.findOne({
-                            $or: [
-                                { email: identifier.toLowerCase?.() || identifier },
-                                { phone: identifier }
-                            ]
-                        }).select('+impersonationToken +impersonationExpires');
-
-                        if (!user || !user.impersonationToken || user.impersonationToken !== token) {
-                            throw new Error("Token d'impersonation invalide ou expiré");
-                        }
-                        if (!user.impersonationExpires || user.impersonationExpires < new Date()) {
-                            throw new Error("Token d'impersonation expiré");
-                        }
-
-                        // One-time use: clear token
-                        user.impersonationToken = null;
-                        user.impersonationExpires = null;
-                        await user.save();
-
-                        return {
-                            id: user._id.toString(),
-                            name: user.name,
-                            email: user.email,
-                            role: user.role,
-                            image: user.image,
-                            companyName: user.companyName,
-                        };
-                    }
-
-                    // Case 3: Normal Email/Phone + Password Login
+                    // Case 3: Classic Email/Password
                     if (!identifier || !password) {
                         throw new Error("Veuillez remplir tous les champs");
                     }
 
-                    // Special Case: Super Admin from ENV (Checked BEFORE DB)
-                    const superAdminEmail = process.env.SUPER_ADMIN_EMAIL;
-                    const superAdminPassword = process.env.SUPER_ADMIN_PASSWORD;
-
-                    console.log("Debug Auth - Identifier:", identifier.toLowerCase().trim());
-                    console.log("Debug Auth - SuperAdmin Configured:", !!superAdminEmail);
-
-                    if (superAdminEmail && identifier.toLowerCase().trim() === superAdminEmail.toLowerCase().trim()) {
-                        if (password === superAdminPassword) {
-                            console.log("Super Admin Login Successful");
-                            return {
-                                id: 'super-admin',
-                                name: 'Super Admin',
-                                email: superAdminEmail,
-                                role: 'admin',
-                            };
-                        } else {
-                            console.warn("Super Admin Login - Password Mismatch");
-                        }
-                    }
-
-                    // For all other users, connect to DB
                     await dbConnect();
 
-                    const phoneNorm = normalizePhone(identifier);
-                    let user = await User.findOne({
+                    const user = await User.findOne({
                         $or: [
                             { email: identifier.toLowerCase() },
                             { phone: identifier },
-                            ...(phoneNorm ? [{ phone: '+' + phoneNorm }, { phone: phoneNorm }] : [])
+                            { phone: normalizePhone(identifier) }
                         ]
                     });
 
-                    if (!user && phoneNorm) {
-                        const allWithPhone = await User.find({ phone: { $exists: true, $ne: '' } }).select('_id phone');
-                        const match = allWithPhone.find(u => normalizePhone(u.phone) === phoneNorm);
-                        if (match) user = await User.findById(match._id);
-                    }
-
                     if (!user) {
-                        throw new Error("Identifiants incorrects");
+                        throw new Error("Identifiants invalides");
                     }
 
                     if (!user.password) {
-                        throw new Error("Ce compte utilise la connexion par SMS uniquement.");
+                        throw new Error("Ce compte utilise une autre méthode de connexion");
                     }
 
-                    const isMatch = await bcrypt.compare(password, user.password);
-                    if (!isMatch) {
-                        throw new Error("Identifiants incorrects");
-                    }
+                    const isPasswordMatch = await bcrypt.compare(password, user.password);
 
-                    if (user.role === 'artisan' && user.status === 'pending') {
-                        throw new Error("Votre compte est en attente de validation.");
-                    }
-                    if (user.status === 'rejected') {
-                        throw new Error("Votre compte a été désactivé.");
+                    if (!isPasswordMatch) {
+                        throw new Error("Identifiants invalides");
                     }
 
                     return {
@@ -202,13 +130,11 @@ export const authOptions = {
                         name: user.name,
                         email: user.email,
                         role: user.role,
-                        image: user.image,
-                        companyName: user.companyName,
+                        phone: user.phone,
+                        isVerified: user.isVerified
                     };
-
                 } catch (error) {
-                    console.error("Auth Error:", error.message);
-                    throw new Error(error.message || "Erreur d'authentification");
+                    throw new Error(error.message);
                 }
             }
         })
@@ -216,10 +142,10 @@ export const authOptions = {
     callbacks: {
         async jwt({ token, user, trigger, session }) {
             if (user) {
-                token.id = user.id;
                 token.role = user.role;
-                token.image = user.image;
-                token.companyName = user.companyName;
+                token.id = user.id;
+                token.phone = user.phone;
+                token.isVerified = user.isVerified;
             }
             if (trigger === "update" && session) {
                 return { ...token, ...session.user };
@@ -228,17 +154,17 @@ export const authOptions = {
         },
         async session({ session, token }) {
             if (token) {
-                session.user.id = token.id;
                 session.user.role = token.role;
-                session.user.image = token.image;
-                session.user.companyName = token.companyName;
+                session.user.id = token.id;
+                session.user.phone = token.phone;
+                session.user.isVerified = token.isVerified;
             }
             return session;
         }
     },
     pages: {
-        signIn: '/login',
-        error: '/login',
+        signIn: "/login",
+        error: "/login"
     },
     session: {
         strategy: "jwt",

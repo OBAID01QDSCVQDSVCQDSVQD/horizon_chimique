@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Loader2, UserPlus, Mail, Lock, User, Briefcase, Hammer } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { Turnstile } from '@marsidev/react-turnstile';
 
 export default function RegisterPage() {
     const router = useRouter();
@@ -12,6 +13,7 @@ export default function RegisterPage() {
     const [role, setRole] = useState('client'); // 'client' or 'artisan'
     const [otp, setOtp] = useState('');
     const [showOtpInput, setShowOtpInput] = useState(false);
+    const [turnstileToken, setTurnstileToken] = useState(null);
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -50,29 +52,32 @@ export default function RegisterPage() {
             }
         } catch (error) {
             console.error(error);
-            toast.error("Erreur d'envoi du code. Vérifiez votre connexion.");
+            toast.error("Erreur d'envoi du code");
         } finally {
             setSubmitting(false);
         }
     };
 
-    const handleVerifyAndRegister = async (e) => {
-        if (e) e.preventDefault();
+    const handleVerifyAndRegister = async () => {
         if (!otp || otp.length < 6) {
             toast.error("Veuillez entrer le code de 6 chiffres");
             return;
         }
 
+        if (!turnstileToken) {
+            toast.error("Veuillez compléter la vérification Anti-Bot (Captcha)");
+            return;
+        }
+
         setSubmitting(true);
         try {
-            const turnstileToken = document.querySelector('[name="cf-turnstile-response"]')?.value;
             const res = await fetch('/api/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     ...formData,
                     role,
-                    otp, // Pass OTP to register API for verification
+                    otp,
                     phone: formData.identifier || formData.phone,
                     turnstileToken
                 })
@@ -97,7 +102,7 @@ export default function RegisterPage() {
     };
 
     const handleSubmit = async (e) => {
-        e.preventDefault();
+        if (e) e.preventDefault();
 
         if (role === 'client') {
             if (!showOtpInput) {
@@ -108,15 +113,23 @@ export default function RegisterPage() {
             return;
         }
 
-        // Artisan logic (direct register with password)
-        setSubmitting(true);
-        const turnstileToken = document.querySelector('[name="cf-turnstile-response"]')?.value;
+        // Artisan logic
+        if (!turnstileToken) {
+            toast.error("Veuillez compléter la vérification Anti-Bot (Captcha)");
+            return;
+        }
 
+        setSubmitting(true);
         try {
             const res = await fetch('/api/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...formData, role, phone: formData.phone, turnstileToken })
+                body: JSON.stringify({ 
+                    ...formData, 
+                    role, 
+                    phone: formData.phone, 
+                    turnstileToken 
+                })
             });
             const data = await res.json();
 
@@ -155,6 +168,7 @@ export default function RegisterPage() {
                             onClick={() => {
                                 setRole('client');
                                 setShowOtpInput(false);
+                                setTurnstileToken(null);
                             }}
                             className={`py-2 px-4 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all ${role === 'client' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                         >
@@ -162,7 +176,10 @@ export default function RegisterPage() {
                         </button>
                         <button
                             type="button"
-                            onClick={() => setRole('artisan')}
+                            onClick={() => {
+                                setRole('artisan');
+                                setTurnstileToken(null);
+                            }}
                             className={`py-2 px-4 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all ${role === 'artisan' ? 'bg-primary text-white shadow-md' : 'text-slate-500 hover:text-slate-700'}`}
                         >
                             <Hammer size={16} /> Artisan
@@ -201,7 +218,7 @@ export default function RegisterPage() {
                                         required
                                     />
                                     {role === 'client' && (
-                                        <p className="text-[10px] text-slate-400 mt-1">Nous vous enverrons un code par SMS (+216).</p>
+                                        <p className="text-[10px] text-slate-400 mt-1">Nous vous enverرrons un code par SMS (+216).</p>
                                     )}
                                 </div>
 
@@ -278,14 +295,15 @@ export default function RegisterPage() {
                         )}
 
                         {/* Turnstile Protection */}
-                        <div className="flex justify-center py-2">
-                            <div 
-                                className="cf-turnstile" 
-                                data-sitekey="1x00000000000000000000AA"
-                                data-theme="light"
-                                data-compact="true"
-                            ></div>
-                        </div>
+                        {(role === 'artisan' || (role === 'client' && showOtpInput)) && (
+                            <div className="flex justify-center py-2">
+                                <Turnstile
+                                    siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
+                                    onSuccess={(token) => setTurnstileToken(token)}
+                                    options={{ theme: 'light' }}
+                                />
+                            </div>
+                        )}
 
                         <button
                             type="submit"

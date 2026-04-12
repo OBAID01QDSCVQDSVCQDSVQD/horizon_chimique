@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Loader2, LogIn, Phone, Mail, Lock, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { Turnstile } from '@marsidev/react-turnstile';
 
 export default function LoginPage() {
     const router = useRouter();
@@ -14,6 +15,7 @@ export default function LoginPage() {
     const [identifier, setIdentifier] = useState('');
     const [otp, setOtp] = useState('');
     const [showOtpInput, setShowOtpInput] = useState(false);
+    const [turnstileToken, setTurnstileToken] = useState(null);
     const [formData, setFormData] = useState({
         identifier: '',
         password: ''
@@ -21,48 +23,44 @@ export default function LoginPage() {
     const [showPassword, setShowPassword] = useState(false);
 
     const handleSendOTP = async () => {
-        if (!identifier) {
-            toast.error("Veuillez entrer votre numéro de téléphone");
+        if (!identifier || identifier.length < 8) {
+            toast.error("Numéro de téléphone invalide (8 chiffres requis)");
             return;
         }
-
         setSubmitting(true);
         try {
-            console.log("Tentative d'envoi OTP vers (WinSMS):", identifier);
-            
             const res = await fetch('/api/auth/otp/send', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ phone: identifier })
             });
-
             const data = await res.json();
-
             if (res.ok) {
                 setShowOtpInput(true);
-                toast.success("Code envoyé via SMS !");
+                toast.success("Code envoyé par SMS !");
             } else {
-                const msg = [data.error, data.hint].filter(Boolean).join(' — ');
-                toast.error(msg || "Erreur d'envoi du code");
+                toast.error(data.error || "Erreur d'envoi du code");
             }
         } catch (error) {
-            console.error("OTP Error:", error);
-            toast.error("Erreur d'envoi du code (Vérifiez votre connexion)");
+            toast.error("Erreur d'envoi du code");
         } finally {
             setSubmitting(false);
         }
     };
 
-    const handleVerifyOTP = async (e) => {
-        if (e) e.preventDefault();
+    const handleVerifyOTP = async () => {
         if (!otp || otp.length < 6) {
             toast.error("Veuillez entrer le code de 6 chiffres");
             return;
         }
 
+        if (!turnstileToken) {
+            toast.error("Veuillez compléter la vérification Anti-Bot (Captcha)");
+            return;
+        }
+
         setSubmitting(true);
         try {
-            const turnstileToken = document.querySelector('[name="cf-turnstile-response"]')?.value;
             const res = await signIn('credentials', {
                 phone: identifier,
                 otp: otp,
@@ -72,20 +70,20 @@ export default function LoginPage() {
 
             if (res.error) {
                 toast.error(res.error);
+                setSubmitting(false);
             } else {
                 toast.success("Connexion réussie !");
                 router.push('/dashboard');
                 router.refresh();
             }
         } catch (error) {
-            toast.error("Une erreur est survenue lors de la vérification");
-        } finally {
+            toast.error("Une erreur est survenue");
             setSubmitting(false);
         }
     };
 
     const handleSubmit = async (e) => {
-        e.preventDefault();
+        if (e) e.preventDefault();
 
         if (loginMethod === 'sms') {
             if (!showOtpInput) {
@@ -96,8 +94,13 @@ export default function LoginPage() {
             return;
         }
 
+        // Classic Login
+        if (!turnstileToken) {
+            toast.error("Veuillez compléter la vérification Anti-Bot (Captcha)");
+            return;
+        }
+
         setSubmitting(true);
-        const turnstileToken = document.querySelector('[name="cf-turnstile-response"]')?.value;
         try {
             const res = await signIn('credentials', {
                 identifier: formData.identifier,
@@ -178,6 +181,7 @@ export default function LoginPage() {
                                     setShowOtpInput(false);
                                     setOtp('');
                                     setIdentifier('');
+                                    setTurnstileToken(null);
                                 }}
                                 className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors mb-4"
                             >
@@ -196,7 +200,7 @@ export default function LoginPage() {
                                                 type="text"
                                                 value={formData.identifier}
                                                 onChange={(e) => setFormData({ ...formData, identifier: e.target.value })}
-                                                className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                                                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
                                                 placeholder="exemple@email.com ou 22123456"
                                                 required
                                             />
@@ -231,6 +235,15 @@ export default function LoginPage() {
                                             </button>
                                         </div>
                                     </div>
+                                    
+                                    {/* Classic Turnstile */}
+                                    <div className="flex justify-center py-2">
+                                        <Turnstile
+                                            siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "0x4AAAAAAAC8kETAdfvcxeGcA"}
+                                            onSuccess={(token) => setTurnstileToken(token)}
+                                            options={{ theme: 'light' }}
+                                        />
+                                    </div>
                                 </div>
                             )}
 
@@ -255,35 +268,36 @@ export default function LoginPage() {
                                             </div>
                                         </div>
                                     ) : (
-                                        <div>
-                                            <label className="text-sm font-bold text-slate-700 block mb-1 text-center">Code de vérification</label>
-                                            <p className="text-xs text-slate-500 text-center mb-4 leading-relaxed">
-                                                Un code a été envoyé au +216 {identifier}. 💬
-                                            </p>
-                                            <input
-                                                type="text"
-                                                value={otp}
-                                                onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                                                className="w-full px-4 py-4 border-2 border-primary/30 rounded-xl text-center text-3xl font-bold tracking-[0.5em] outline-none focus:border-primary"
-                                                placeholder="000000"
-                                                maxLength={6}
-                                                required
-                                            />
-                                            <button type="button" onClick={() => setShowOtpInput(false)} className="text-xs text-primary font-bold mt-4 block mx-auto underline">Modifier le numéro</button>
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="text-sm font-bold text-slate-700 block mb-1 text-center">Code de vérification</label>
+                                                <p className="text-xs text-slate-500 text-center mb-4 leading-relaxed">
+                                                    Un code a été envoyé au +216 {identifier}. 💬
+                                                </p>
+                                                <input
+                                                    type="text"
+                                                    value={otp}
+                                                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                                                    className="w-full px-4 py-4 border-2 border-primary/30 rounded-xl text-center text-3xl font-bold tracking-[0.5em] outline-none focus:border-primary"
+                                                    placeholder="000000"
+                                                    maxLength={6}
+                                                    required
+                                                />
+                                                <button type="button" onClick={() => setShowOtpInput(false)} className="text-xs text-primary font-bold mt-4 block mx-auto underline">Modifier le numéro</button>
+                                            </div>
+
+                                            {/* SMS Turnstile (بعد إدخال OTP) */}
+                                            <div className="flex justify-center py-2">
+                                                <Turnstile
+                                                    siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
+                                                    onSuccess={(token) => setTurnstileToken(token)}
+                                                    options={{ theme: 'light' }}
+                                                />
+                                            </div>
                                         </div>
                                     )}
                                 </div>
                             )}
-
-                            {/* Turnstile Protection */}
-                            <div className="flex justify-center py-2">
-                                <div 
-                                    className="cf-turnstile" 
-                                    data-sitekey="0x4AAAAAAAC8kETAdfvcxeGcA"
-                                    data-theme="light"
-                                    data-compact="true"
-                                ></div>
-                            </div>
 
                             <button
                                 type="submit"
