@@ -6,6 +6,7 @@ import Realization from '@/models/Realization';
 import User from '@/models/User'; // Ensure User model is loaded
 import Comment from '@/models/Comment';
 import Review from '@/models/Review';
+import redis from '@/lib/redis';
 
 export async function POST(req) {
     try {
@@ -33,6 +34,11 @@ export async function POST(req) {
             completionDate
         });
 
+        // مسح الـ Cache العام عند إضافة مشروع جديد
+        if (redis) {
+            await redis.del('realizations:public');
+        }
+
         return NextResponse.json({
             success: true,
             message: "Projet ajouté avec succès !",
@@ -54,6 +60,21 @@ export async function GET(req) {
 
         let query = { isVisible: true };
 
+        // 1. استخدام Redis فقط للقائمة العامة (ليست خاصة بالمستخدم)
+        const isPublicList = !mine && !artisanId;
+        const cacheKey = 'realizations:public';
+
+        if (isPublicList && redis) {
+            try {
+                const cachedData = await redis.get(cacheKey);
+                if (cachedData) {
+                    return NextResponse.json({ success: true, realizations: JSON.parse(cachedData), cached: true });
+                }
+            } catch (err) {
+                console.error('Redis GET Error:', err);
+            }
+        }
+
         if (mine) {
             const session = await getServerSession(authOptions);
             if (!session) return NextResponse.json({ success: false, error: "Non connecté" }, { status: 401 });
@@ -71,14 +92,12 @@ export async function GET(req) {
         const data = await Promise.all(realizations.map(async (p) => {
             const commentsCount = await Comment.countDocuments({ realization: p._id, status: 'approved' });
 
-            // Calculate Artisan Rating
             let artisanRating = 0;
-            // let artisanReviewCount = 0; // Optional if needed
             if (p.artisan && p.artisan._id) {
                 const reviews = await Review.find({ artisan: p.artisan._id, status: 'approved' }).select('rating');
                 if (reviews.length > 0) {
                     const sum = reviews.reduce((acc, r) => acc + r.rating, 0);
-                    artisanRating = (sum / reviews.length).toFixed(1); // Keep as string "4.5"
+                    artisanRating = (sum / reviews.length).toFixed(1);
                 }
             }
 
@@ -90,7 +109,16 @@ export async function GET(req) {
             };
         }));
 
-        return NextResponse.json({ success: true, realizations: data });
+        // 2. تخزين النتيجة في Redis للقائمة العامة لمدة ساعة
+        if (isPublicList && redis && data.length > 0) {
+            try {
+                await redis.set(cacheKey, JSON.stringify(data), 'EX', 3600);
+            } catch (err) {
+                console.error('Redis SET Error:', err);
+            }
+        }
+
+        return NextResponse.json({ success: true, realizations: data, cached: false });
 
     } catch (error) {
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
