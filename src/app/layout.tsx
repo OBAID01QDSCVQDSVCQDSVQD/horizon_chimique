@@ -95,11 +95,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 g.defer = true;
                 g.async = true;
                 s.parentNode.insertBefore(g,s);
+                window.chatwootSettings = {
+                  position: 'right',
+                  type: 'standard',
+                  launcherTitle: 'Besoin d’aide ?',
+                  darkMode: 'auto',
+                  hideMessageBubble: false,
+                  showPopout: false,
+                };
                 g.onload=function(){
                   window.chatwootSDK.run({
                     websiteToken: 'PVrE9CEmECNbbhmwJv9LiBfo',
                     baseUrl: BASE_URL,
-                    locale: 'fr'
                   })
                 }
               })(document,"script");
