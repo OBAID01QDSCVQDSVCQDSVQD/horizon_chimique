@@ -2,9 +2,20 @@ import { NextResponse } from 'next/server';
 import { runWithMongoRetry } from '@/lib/db';
 import OTP from '@/models/OTP';
 import { sendSMS } from '@/lib/winsms';
+import { rateLimit } from '@/lib/ratelimit';
 
 export async function POST(req) {
   try {
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || '127.0.0.1';
+    
+    // Strict Rate Limit: 2 SMS per minute
+    const { success: minOk } = await rateLimit(`otp_min_${ip}`, 2, 60);
+    if (!minOk) return NextResponse.json({ error: 'Trop de tentatives. Attendez une minute.' }, { status: 429 });
+
+    // Strict Rate Limit: 10 SMS per hour
+    const { success: hrOk } = await rateLimit(`otp_hr_${ip}`, 10, 3600);
+    if (!hrOk) return NextResponse.json({ error: 'Limite horaire atteinte pour les SMS.' }, { status: 429 });
+
     const { phone } = await req.json();
     if (!phone) return NextResponse.json({ error: 'Numéro de téléphone requis' }, { status: 400 });
 

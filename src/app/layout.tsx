@@ -129,6 +129,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <WhatsAppWidget />
           </LayoutWrapper>
         </Providers>
+        <Script
+          src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+          strategy="lazyOnload"
+        />
       </body>
     </html>
   );

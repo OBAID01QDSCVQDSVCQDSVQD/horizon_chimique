@@ -101,9 +101,12 @@ export default function Home() {
     setSendingSupport(true);
 
     try {
+      const turnstileToken = document.querySelector('[name="cf-turnstile-response"]')?.value;
+
       const payload = {
         ...supportForm,
-        type: supportType
+        type: supportType,
+        turnstileToken
       };
 
       const res = await fetch('/api/requests', {
@@ -512,6 +515,15 @@ export default function Home() {
                     </div>
                   </div>
                 )}
+
+                {/* Cloudflare Turnstile Protection */}
+                <div className="flex justify-center py-2 overflow-hidden">
+                  <div 
+                    className="cf-turnstile" 
+                    data-sitekey={process.env.NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY}
+                    data-theme="light"
+                  ></div>
+                </div>
 
                 <div className="pt-2 shrink-0">
                   <button

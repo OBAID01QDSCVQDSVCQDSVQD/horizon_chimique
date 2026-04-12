@@ -62,9 +62,11 @@ export default function LoginPage() {
 
         setSubmitting(true);
         try {
+            const turnstileToken = document.querySelector('[name="cf-turnstile-response"]')?.value;
             const res = await signIn('credentials', {
                 phone: identifier,
                 otp: otp,
+                turnstileToken,
                 redirect: false
             });
 
@@ -95,10 +97,12 @@ export default function LoginPage() {
         }
 
         setSubmitting(true);
+        const turnstileToken = document.querySelector('[name="cf-turnstile-response"]')?.value;
         try {
             const res = await signIn('credentials', {
                 identifier: formData.identifier,
                 password: formData.password,
+                turnstileToken,
                 redirect: false,
             });
 
@@ -270,6 +274,16 @@ export default function LoginPage() {
                                     )}
                                 </div>
                             )}
+
+                            {/* Turnstile Protection */}
+                            <div className="flex justify-center py-2">
+                                <div 
+                                    className="cf-turnstile" 
+                                    data-sitekey={process.env.NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY}
+                                    data-theme="light"
+                                    data-compact="true"
+                                ></div>
+                            </div>
 
                             <button
                                 type="submit"

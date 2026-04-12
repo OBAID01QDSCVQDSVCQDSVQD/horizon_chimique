@@ -21,11 +21,28 @@ export const authOptions = {
                 identifier: { label: "Email ou Téléphone", type: "text" },
                 password: { label: "Mot de passe", type: "password" },
                 otp: { label: "OTP Code", type: "text" },
-                phone: { label: "Téléphone", type: "text" }
+                phone: { label: "Téléphone", type: "text" },
+                turnstileToken: { label: "Turnstile Token", type: "text" }
             },
             async authorize(credentials) {
                 try {
-                    const { identifier, password, otp, phone: phoneCred } = credentials;
+                    const { identifier, password, otp, phone: phoneCred, turnstileToken } = credentials;
+
+                    // 1. Verify Turnstile if secret is present
+                    if (process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY && turnstileToken) {
+                        const verifyRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                secret: process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY,
+                                response: turnstileToken
+                            })
+                        });
+                        const verifyJson = await verifyRes.json();
+                        if (!verifyJson.success) {
+                            throw new Error("Échec de la vérification Anti-Bot");
+                        }
+                    }
 
                     // Case 4: Local SMS OTP (WinSMS.tn)
                     if (otp && phoneCred) {

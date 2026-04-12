@@ -1,15 +1,41 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import Contact from '@/models/Contact';
-import { getServerSession } from 'next-auth'; // Verify if using next-auth
+import { getServerSession } from 'next-auth';
 import { sendSMS } from "@/lib/winsms";
+import { rateLimit } from '@/lib/ratelimit';
 
 // POST: Human sends message
 export async function POST(req) {
-    await dbConnect();
     try {
+        const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || '127.0.0.1';
+        
+        // 1. Rate Limiting (5 requests per 15 mins)
+        const { success: rlOk } = await rateLimit(`contact_${ip}`, 5, 900);
+        if (!rlOk) {
+            return NextResponse.json({ success: false, error: "Trop de tentatives. Veuillez réessayer plus tard." }, { status: 429 });
+        }
+
+        await dbConnect();
         const body = await req.json();
-        const { name, phone, email, address, subject, message } = body;
+        const { name, phone, email, address, subject, message, turnstileToken } = body;
+
+        // 2. Turnstile Verification
+        if (process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY && turnstileToken) {
+            const verifyRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    secret: process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY,
+                    response: turnstileToken,
+                    remoteip: ip
+                })
+            });
+            const verifyJson = await verifyRes.json();
+            if (!verifyJson.success) {
+                return NextResponse.json({ success: false, error: "Échec de la vérification Anti-Bot" }, { status: 403 });
+            }
+        }
 
         // Validation (Server side)
         if (!name || !phone) {

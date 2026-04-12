@@ -4,11 +4,45 @@ import Request from '@/models/Request';
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { sendSMS } from "@/lib/winsms";
+import { rateLimit } from '@/lib/ratelimit';
 
 export async function POST(req) {
     try {
+        // 1. Rate Limiting based on IP
+        const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || '127.0.0.1';
+        const { success } = await rateLimit(`req_form_${ip}`, 5, 900); // 5 requests per 15 mins
+        
+        if (!success) {
+            return NextResponse.json({ 
+                success: false, 
+                error: "Trop de tentatives. Veuillez réessayer dans 15 minutes." 
+            }, { status: 429 });
+        }
+
         await dbConnect();
         const data = await req.json();
+
+        // 2. Cloudflare Turnstile Verification (Optional for now until keys are set)
+        if (process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY) {
+            const token = data.turnstileToken;
+            if (!token) {
+                return NextResponse.json({ success: false, error: "Vérification requise (Captcha)" }, { status: 400 });
+            }
+
+            const verifyRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    secret: process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY,
+                    response: token,
+                    remoteip: ip
+                })
+            });
+            const verifyJson = await verifyRes.json();
+            if (!verifyJson.success) {
+                return NextResponse.json({ success: false, error: "Échec de la vérification Anti-Bot" }, { status: 403 });
+            }
+        }
 
         // Basic validation
         if (!data.message) {

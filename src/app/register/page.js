@@ -65,6 +65,7 @@ export default function RegisterPage() {
 
         setSubmitting(true);
         try {
+            const turnstileToken = document.querySelector('[name="cf-turnstile-response"]')?.value;
             const res = await fetch('/api/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -72,7 +73,8 @@ export default function RegisterPage() {
                     ...formData,
                     role,
                     otp, // Pass OTP to register API for verification
-                    phone: formData.identifier || formData.phone
+                    phone: formData.identifier || formData.phone,
+                    turnstileToken
                 })
             });
             const data = await res.json();
@@ -108,11 +110,13 @@ export default function RegisterPage() {
 
         // Artisan logic (direct register with password)
         setSubmitting(true);
+        const turnstileToken = document.querySelector('[name="cf-turnstile-response"]')?.value;
+
         try {
             const res = await fetch('/api/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...formData, role, phone: formData.phone })
+                body: JSON.stringify({ ...formData, role, phone: formData.phone, turnstileToken })
             });
             const data = await res.json();
 
@@ -272,6 +276,16 @@ export default function RegisterPage() {
                                 </button>
                             </div>
                         )}
+
+                        {/* Turnstile Protection */}
+                        <div className="flex justify-center py-2">
+                            <div 
+                                className="cf-turnstile" 
+                                data-sitekey={process.env.NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY}
+                                data-theme="light"
+                                data-compact="true"
+                            ></div>
+                        </div>
 
                         <button
                             type="submit"

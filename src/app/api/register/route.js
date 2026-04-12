@@ -3,11 +3,37 @@ import bcrypt from 'bcryptjs';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
 import OTP from '@/models/OTP';
+import { rateLimit } from '@/lib/ratelimit';
 
 export async function POST(req) {
     try {
+        const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || '127.0.0.1';
+        
+        // 1. Rate Limiting for registration (Strict: 3 per hour)
+        const { success: rlOk } = await rateLimit(`reg_${ip}`, 3, 3600);
+        if (!rlOk) {
+            return NextResponse.json({ success: false, error: "Trop de tentatives d'inscription. Réessayez plus tard." }, { status: 429 });
+        }
+
         const body = await req.json();
-        const { name, identifier, email: reqEmail, phone: reqPhone, password, role, specialty, otp } = body;
+        const { name, identifier, email: reqEmail, phone: reqPhone, password, role, specialty, otp, turnstileToken } = body;
+
+        // 2. Turnstile Verification
+        if (process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY && turnstileToken) {
+            const verifyRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    secret: process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY,
+                    response: turnstileToken,
+                    remoteip: ip
+                })
+            });
+            const verifyJson = await verifyRes.json();
+            if (!verifyJson.success) {
+                return NextResponse.json({ success: false, error: "Échec de la vérification Anti-Bot" }, { status: 403 });
+            }
+        }
 
         // Basic Validation
         if (!name || (!identifier && !reqPhone) || (role === 'artisan' && !password)) {

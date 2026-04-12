@@ -49,10 +49,12 @@ export default function ContactPage() {
         setLoading(true);
 
         try {
+            const turnstileToken = document.querySelector('[name="cf-turnstile-response"]')?.value;
+
             const res = await fetch('/api/contact', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData)
+                body: JSON.stringify({ ...formData, turnstileToken })
             });
 
             const result = await res.json();
@@ -253,6 +255,15 @@ export default function ContactPage() {
                                         placeholder="Écrivez votre message ici... (Optionnel)"
                                         className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all resize-none"
                                     ></textarea>
+                                </div>
+
+                                {/* Turnstile Protection */}
+                                <div className="flex justify-center py-2">
+                                    <div 
+                                        className="cf-turnstile" 
+                                        data-sitekey={process.env.NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY}
+                                        data-theme="light"
+                                    ></div>
                                 </div>
 
                                 <div className="pt-2">
