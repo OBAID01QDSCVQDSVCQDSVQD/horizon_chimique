@@ -6,19 +6,28 @@ import UserAnalytics from '@/models/Analytics';
 const sessionCache = new Map();
 
 async function getGeoLocation(ip) {
-    if (!ip || ip === '::1' || ip === '127.0.0.1') return { country: 'Localhost', city: 'Local' };
+    if (!ip || ip === '::1' || ip === '127.0.0.1' || ip.startsWith('192.168.') || ip.startsWith('10.')) {
+        return { country: 'Localhost', city: 'Local' };
+    }
     
     try {
-        // We can use a free API like ipapi.co (or similar)
-        const response = await fetch(`https://ipapi.co/${ip}/json/`).then(r => r.json());
-        if (response && response.country_name) {
+        const response = await fetch(`https://ipapi.co/${ip}/json/`, {
+            next: { revalidate: 3600 } // Cache for 1 hour
+        });
+        
+        if (!response.ok) {
+            return { country: 'Unknown', city: 'Unknown' };
+        }
+
+        const data = await response.json();
+        if (data && data.country_name) {
             return {
-                country: response.country_name,
-                city: response.city || 'Unknown'
+                country: data.country_name,
+                city: data.city || 'Unknown'
             };
         }
     } catch (error) {
-        console.error('GeoIP Error:', error);
+        // Fallback quiet
     }
     return { country: 'Unknown', city: 'Unknown' };
 }
