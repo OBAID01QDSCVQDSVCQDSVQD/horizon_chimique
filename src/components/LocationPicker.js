@@ -13,13 +13,6 @@ export default function LocationPicker({ onLocationSelect, initialLocation = nul
         libraries,
     });
 
-    useEffect(() => {
-        if (loadError) {
-            console.error("Google Maps Load Error:", loadError);
-        }
-    }, [loadError]);
-
-
     const [selected, setSelected] = useState(initialLocation);
     const [address, setAddress] = useState(initialLocation?.address || '');
     const [mapCenter, setMapCenter] = useState(initialLocation || { lat: 36.8065, lng: 10.1815 }); // Tunis
@@ -29,30 +22,57 @@ export default function LocationPicker({ onLocationSelect, initialLocation = nul
         if (onLocationSelect) onLocationSelect({ ...pos, address: addr });
     }, [onLocationSelect]);
 
-    // 1. IP-Based Auto Location (Instant, No permission needed)
+    // 1. Auto-location on mount (GPS then IP fallback)
     useEffect(() => {
+        if (!isLoaded || selected || initialLocation) return;
+
+        const attemptAutoLocation = () => {
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    async (pos) => {
+                        const p = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                        setMapCenter(p);
+                        setSelected(p);
+                        try {
+                            const res = await getGeocode({ location: p });
+                            const addr = res[0]?.formatted_address || "Ma position actuelle";
+                            setAddress(addr);
+                            updateParent(p, addr);
+                        } catch (e) {
+                            updateParent(p, "Ma position actuelle");
+                        }
+                    },
+                    () => {
+                        detectLocationByIp();
+                    },
+                    { enableHighAccuracy: true, timeout: 5000 }
+                );
+            } else {
+                detectLocationByIp();
+            }
+        };
+
         const detectLocationByIp = async () => {
-            if (initialLocation || selected) return; // Don't overwrite if manually set
-            
             try {
                 const res = await fetch('https://ipapi.co/json/');
                 const data = await res.json();
                 if (data.latitude && data.longitude) {
                     const pos = { lat: data.latitude, lng: data.longitude };
-                    const cityAddr = `${data.city}, ${data.region}, Tunisia`;
+                    const cityAddr = `${data.city}, ${data.region}`;
                     setMapCenter(pos);
                     setSelected(pos);
                     setAddress(cityAddr);
                     updateParent(pos, cityAddr);
                 }
             } catch (err) {
-                console.error("IP detection failed", err);
+                console.error("IP fallback failed", err);
             }
         };
-        detectLocationByIp();
-    }, [initialLocation, selected, updateParent]);
 
-    // Search Component
+        attemptAutoLocation();
+    }, [isLoaded, initialLocation, selected, updateParent]);
+
+    // 2. Search Component (Nested for convenience)
     const PlacesAutocomplete = () => {
         const {
             ready,
@@ -75,13 +95,13 @@ export default function LocationPicker({ onLocationSelect, initialLocation = nul
                 setMapCenter(pos);
                 updateParent(pos, desc);
             } catch (error) {
-                console.error("Error: ", error);
+                console.error("Geocode Error: ", error);
             }
         };
 
         return (
-            <div className="relative mb-3 flex gap-2">
-                <div className="relative flex-1">
+            <div className="relative mb-3">
+                <div className="relative">
                     <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
                         <Search size={16} />
                     </div>
@@ -93,11 +113,11 @@ export default function LocationPicker({ onLocationSelect, initialLocation = nul
                         }}
                         disabled={!ready}
                         className="w-full pl-9 pr-4 py-3 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-primary shadow-sm text-sm"
-                        placeholder="Rechercher ma ville ou adresse..."
+                        placeholder="Rechercher une ville ou un quartier..."
                     />
                 </div>
                 {status === "OK" && (
-                    <ul className="absolute z-[100] bg-white border border-slate-200 w-full top-full mt-1 rounded-xl shadow-2xl max-h-48 overflow-y-auto overflow-x-hidden">
+                    <ul className="absolute z-[110] bg-white border border-slate-200 w-full top-full mt-1 rounded-xl shadow-2xl max-h-48 overflow-y-auto">
                         {data.map(({ place_id, description }) => (
                             <li
                                 key={place_id}
@@ -123,17 +143,17 @@ export default function LocationPicker({ onLocationSelect, initialLocation = nul
                 setMapCenter(p);
                 try {
                     const res = await getGeocode({ location: p });
-                    const addr = res[0]?.formatted_address || "GPS Location";
+                    const addr = res[0]?.formatted_address || "Position GPS";
                     setAddress(addr);
                     updateParent(p, addr);
                 } catch (e) {
-                    setAddress("GPS Location");
-                    updateParent(p, "GPS Location");
+                    setAddress("Position GPS");
+                    updateParent(p, "Position GPS");
                 }
                 setIsLocating(false);
             },
             () => setIsLocating(false),
-            { enableHighAccuracy: false, timeout: 5000 }
+            { enableHighAccuracy: true, timeout: 8000 }
         );
     };
 
@@ -146,7 +166,20 @@ export default function LocationPicker({ onLocationSelect, initialLocation = nul
             setAddress(addr);
             updateParent(p, addr);
         } catch (error) {
-            updateParent(p, address || "Point sélectionné");
+            updateParent(p, "Position sur la carte");
+        }
+    };
+
+    const handleMapClick = async (e) => {
+        const p = { lat: e.latLng.lat(), lng: e.latLng.lng() };
+        setSelected(p);
+        try {
+            const res = await getGeocode({ location: p });
+            const addr = res[0]?.formatted_address || "Position sélectionnée";
+            setAddress(addr);
+            updateParent(p, addr);
+        } catch (error) {
+            updateParent(p, "Position sur la carte");
         }
     };
 
@@ -164,21 +197,16 @@ export default function LocationPicker({ onLocationSelect, initialLocation = nul
 
     if (!isLoaded) return <div className="p-12 flex flex-col items-center gap-3 bg-slate-50 rounded-2xl"><Loader2 className="animate-spin text-primary" /><p className="text-xs text-slate-400">Chargement de la carte...</p></div>;
 
-
     return (
         <div className="w-full space-y-3">
             <PlacesAutocomplete />
             
-            <div className="relative h-64 w-full rounded-2xl overflow-hidden border border-slate-200 shadow-inner group">
+            <div className="relative h-64 w-full rounded-2xl overflow-hidden border border-slate-200 shadow-inner">
                 <GoogleMap
                     zoom={15}
                     center={mapCenter}
                     mapContainerClassName="w-full h-full"
-                    onClick={(e) => {
-                        const p = { lat: e.latLng.lat(), lng: e.latLng.lng() };
-                        setSelected(p);
-                        updateParent(p, address || "Point sélectionné");
-                    }}
+                    onClick={handleMapClick}
                     options={{
                         disableDefaultUI: true,
                         zoomControl: true,
@@ -190,6 +218,7 @@ export default function LocationPicker({ onLocationSelect, initialLocation = nul
                             position={selected} 
                             draggable={true} 
                             onDragEnd={handleMarkerDragEnd}
+                            animation={window.google?.maps?.Animation?.DROP}
                         />
                     )}
                 </GoogleMap>
@@ -197,15 +226,15 @@ export default function LocationPicker({ onLocationSelect, initialLocation = nul
                 <button
                     type="button"
                     onClick={handleGpsLocation}
-                    className="absolute bottom-4 right-4 bg-primary text-white p-3 rounded-full shadow-2xl hover:bg-black transition-all active:scale-90 flex items-center gap-2 font-bold text-xs"
+                    className="absolute bottom-4 right-4 bg-primary text-white px-4 py-2.5 rounded-full shadow-2xl hover:bg-black transition-all active:scale-90 flex items-center gap-2 font-bold text-xs z-10"
                 >
                     {isLocating ? <Loader2 className="animate-spin" size={16} /> : <Navigation size={16} />}
-                    {isLocating ? 'Détection...' : 'GPS'}
+                    {isLocating ? 'Détection...' : 'Ma Position'}
                 </button>
             </div>
 
             {address && (
-                <div className="flex items-center gap-2 p-3 bg-white border border-slate-100 rounded-xl text-xs text-slate-600 shadow-sm">
+                <div className="flex items-center gap-2 p-3 bg-blue-50/50 border border-blue-100 rounded-xl text-xs text-slate-700 shadow-sm animate-in fade-in slide-in-from-bottom-1 duration-300">
                     <MapPin size={14} className="text-primary shrink-0" />
                     <span className="font-bold truncate">{address}</span>
                 </div>
