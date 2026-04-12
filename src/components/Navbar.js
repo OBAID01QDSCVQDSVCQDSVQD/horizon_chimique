@@ -123,7 +123,7 @@ export default function Navbar() {
                                         <span className="hidden lg:inline ml-1">{session.user.name ? session.user.name.split(' ')[0] : 'Menu'}</span>
                                     </Link>
                                     <button
-                                        onClick={() => signOut()}
+                                        onClick={() => signOut({ callbackUrl: '/' })}
                                         className="text-slate-400 hover:text-red-500 transition-colors"
                                         title="Se déconnecter"
                                     >
@@ -212,7 +212,7 @@ export default function Navbar() {
                                             Mon Espace ({session.user.role})
                                         </Link>
                                         <button
-                                            onClick={() => signOut()}
+                                            onClick={() => signOut({ callbackUrl: '/' })}
                                             className="block w-full text-center py-3 text-red-500 font-medium hover:bg-red-50 rounded-lg"
                                         >
                                             Se déconnecter

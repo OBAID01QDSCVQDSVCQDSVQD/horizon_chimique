@@ -87,15 +87,19 @@ export const authOptions = {
                         });
 
                         if (!user) {
-                            // Auto-register new user
+                            // Auto-register new user with random hashed password
+                            const randomPassword = Math.random().toString(36).slice(-10) + Math.random().toString(36).slice(-10);
+                            const hashedPassword = await bcrypt.hash(randomPassword, 10);
+                            
                             user = await User.create({
                                 name: `Utilisateur ${normalized.slice(-8)}`,
                                 phone: normalized,
+                                password: hashedPassword,
                                 role: 'client',
                                 isVerified: true,
                                 status: 'approved'
                             });
-                            console.log("🆕 New user registered automatically via OTP:", normalized);
+                            console.log("🆕 New user registered automatically via OTP (Secured):", normalized);
                         }
 
                         // Consommer l'OTP
