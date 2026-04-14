@@ -14,6 +14,7 @@ export default function EditRealizationPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [uploading, setUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
 
     const [formData, setFormData] = useState({
         title: '',
@@ -68,6 +69,7 @@ export default function EditRealizationPage() {
         }
 
         setUploading(true);
+        setUploadProgress(0);
         const newUrls = [];
 
         try {
@@ -75,38 +77,60 @@ export default function EditRealizationPage() {
                 const data = new FormData();
                 data.append('file', file);
 
-                const res = await fetch('/api/upload', {
-                    method: 'POST',
-                    body: data
-                });
+                await new Promise((resolve, reject) => {
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('POST', '/api/upload');
 
-                const json = await res.json();
-                if (json.success) {
-                    if (type === 'video') {
-                        setFormData(prev => ({ ...prev, video: json.url }));
-                        toast.success("Vidéo mise à jour");
-                        setUploading(false);
-                        return;
-                    }
-                    newUrls.push(json.url);
-                } else {
-                    toast.error(`Erreur upload: ${file.name}`);
-                }
+                    // Track progress
+                    xhr.upload.onprogress = (event) => {
+                        if (event.lengthComputable) {
+                            const percentComplete = Math.round((event.loaded / event.total) * 100);
+                            setUploadProgress(percentComplete);
+                        }
+                    };
+
+                    xhr.onload = () => {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            try {
+                                const response = JSON.parse(xhr.responseText);
+                                if (response.success) {
+                                    if (type === 'video') {
+                                        setFormData(prev => ({ ...prev, video: response.url }));
+                                        toast.success("Vidéo mise à jour");
+                                    } else {
+                                        newUrls.push(response.url);
+                                    }
+                                    resolve();
+                                } else {
+                                    reject(new Error(response.error || "Erreur upload"));
+                                }
+                            } catch (e) {
+                                reject(e);
+                            }
+                        } else {
+                            reject(new Error("Erreur serveur"));
+                        }
+                    };
+
+                    xhr.onerror = () => reject(new Error("Erreur réseau"));
+                    xhr.send(data);
+                });
             }
 
-            if (type === 'image') {
+            if (type === 'image' && newUrls.length > 0) {
                 setFormData(prev => ({
                     ...prev,
                     images: [...prev.images, ...newUrls]
                 }));
-                if (newUrls.length > 0) toast.success(`${newUrls.length} image(s) ajoutée(s)`);
+                toast.success(`${newUrls.length} image(s) ajoutée(s)`);
             }
 
         } catch (error) {
             console.error(error);
-            toast.error("Erreur lors de l'upload");
+            toast.error("Erreur lors de l'upload: " + error.message);
         } finally {
             setUploading(false);
+            setUploadProgress(0);
             e.target.value = '';
         }
     };
@@ -270,9 +294,16 @@ export default function EditRealizationPage() {
                                         </button>
                                     </div>
                                 ) : (
-                                    <div className="relative aspect-video bg-slate-50 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center text-slate-400 hover:border-primary hover:text-primary hover:bg-slate-100 transition-all cursor-pointer group">
+                                    <div className="relative aspect-video bg-slate-50 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center text-slate-400 hover:border-primary hover:text-primary hover:bg-slate-100 transition-all cursor-pointer group overflow-hidden">
                                         {uploading ? (
-                                            <Loader2 className="animate-spin" />
+                                            <div className="flex flex-col items-center z-10 w-full px-8">
+                                                <Loader2 className="animate-spin mb-3 text-primary" size={36} />
+                                                <span className="font-bold text-slate-700 text-lg mb-1">{uploadProgress}%</span>
+                                                <div className="w-full max-w-[200px] h-2 bg-slate-200 rounded-full mt-2 overflow-hidden">
+                                                    <div className="h-full bg-primary transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
+                                                </div>
+                                                <span className="text-xs text-slate-400 mt-2">Veuillez patienter...</span>
+                                            </div>
                                         ) : (
                                             <>
                                                 <UploadCloud size={24} className="mb-2 group-hover:scale-110 transition-transform" />
@@ -284,7 +315,7 @@ export default function EditRealizationPage() {
                                             accept="video/*"
                                             onChange={(e) => handleFileUpload(e, 'video')}
                                             disabled={uploading}
-                                            className="absolute inset-0 opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                                            className="absolute inset-0 opacity-0 cursor-pointer disabled:cursor-not-allowed z-20"
                                         />
                                     </div>
                                 )}
