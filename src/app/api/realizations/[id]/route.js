@@ -49,6 +49,7 @@ export async function PUT(req, { params }) {
         if (data.description) realization.description = data.description;
         if (data.tags) realization.tags = data.tags;
         if (data.images) realization.images = data.images;
+        if (data.video !== undefined) realization.video = data.video;
         if (data.location) realization.location = data.location;
         if (data.isVisible !== undefined) realization.isVisible = data.isVisible;
 

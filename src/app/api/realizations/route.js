@@ -16,7 +16,7 @@ export async function POST(req) {
         }
 
         const data = await req.json();
-        const { title, description, tags, images, location, completionDate } = data;
+        const { title, description, tags, images, video, location, completionDate } = data;
 
         if (!title || !description || !images || images.length === 0) {
             return NextResponse.json({ success: false, error: "Titre, description et images sont requis." }, { status: 400 });
@@ -30,6 +30,7 @@ export async function POST(req) {
             description,
             tags,
             images,
+            video,
             location,
             completionDate
         });
