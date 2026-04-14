@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import dbConnect from '@/lib/db';
 import Realization from '@/models/Realization';
 import { getMobileSession } from "@/lib/mobileAuth";
+import redis from '@/lib/redis';
 
 export async function GET(req, { params }) {
     try {
@@ -54,6 +55,15 @@ export async function PUT(req, { params }) {
         if (data.isVisible !== undefined) realization.isVisible = data.isVisible;
 
         await realization.save();
+
+        // مسح الـ Cache العام عند تحديث المشروع
+        if (redis) {
+            try {
+                await redis.del('realizations:public');
+            } catch (cacheErr) {
+                console.error('Redis Cache Clear Error:', cacheErr);
+            }
+        }
 
         return NextResponse.json({ success: true, realization });
 
