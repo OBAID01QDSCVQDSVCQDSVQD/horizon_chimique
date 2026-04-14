@@ -158,7 +158,7 @@ export default async function PublicRealizationDetail({ params }) {
                     )}
 
                     {/* Facebook-Style Image Grid */}
-                    <ProjectGalleryFB images={project.images} />
+                    <ProjectGalleryFB images={project.images} video={project.video} />
 
                     {/* Likes Count Bar */}
                     {likesCount > 0 && (

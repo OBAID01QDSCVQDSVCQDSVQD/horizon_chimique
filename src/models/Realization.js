@@ -18,8 +18,11 @@ const RealizationSchema = new mongoose.Schema({
         type: String // Multi-tags: 'Peinture', 'Etanchéité', etc.
     }],
     images: [{
-        type: String // URLs from Cloudinary
+        type: String // URLs from Cloudinary/MinIO
     }],
+    video: {
+        type: String // URL of the video file
+    },
     location: {
         type: String
     },

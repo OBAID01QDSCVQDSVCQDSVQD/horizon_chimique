@@ -15,7 +15,8 @@ export default function NewRealizationPage() {
         title: '',
         description: '',
         tags: [], // Multi - tags
-        images: []
+        images: [],
+        video: ''
     });
 
     const definedTags = ['Peinture', 'Etanchéité', 'Isolation', 'Résine', 'Béton', 'Décoration', 'Plomberie', 'Electricité'];
@@ -30,12 +31,11 @@ export default function NewRealizationPage() {
         });
     };
 
-    const handleImageUpload = async (e) => {
+    const handleFileUpload = async (e, type = 'image') => {
         const files = Array.from(e.target.files);
         if (files.length === 0) return;
 
-        // Limit to 10 images total
-        if (formData.images.length + files.length > 10) {
+        if (type === 'image' && formData.images.length + files.length > 10) {
             toast.error("Maximum 10 images autorisées");
             return;
         }
@@ -55,18 +55,25 @@ export default function NewRealizationPage() {
 
                 const json = await res.json();
                 if (json.success) {
+                    if (type === 'video') {
+                        setFormData(prev => ({ ...prev, video: json.url }));
+                        toast.success("Vidéo ajoutée");
+                        setUploading(false);
+                        return; // Only one video
+                    }
                     newUrls.push(json.url);
                 } else {
                     toast.error(`Erreur upload: ${file.name}`);
                 }
             }
 
-            setFormData(prev => ({
-                ...prev,
-                images: [...prev.images, ...newUrls]
-            }));
-
-            if (newUrls.length > 0) toast.success(`${newUrls.length} image(s) ajoutée(s)`);
+            if (type === 'image') {
+                setFormData(prev => ({
+                    ...prev,
+                    images: [...prev.images, ...newUrls]
+                }));
+                if (newUrls.length > 0) toast.success(`${newUrls.length} image(s) ajoutée(s)`);
+            }
 
         } catch (error) {
             console.error(error);
@@ -84,10 +91,14 @@ export default function NewRealizationPage() {
         }));
     };
 
+    const removeVideo = () => {
+        setFormData(prev => ({ ...prev, video: '' }));
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (formData.images.length === 0) {
-            toast.error("Veuillez ajouter au moins une image");
+        if (formData.images.length === 0 && !formData.video) {
+            toast.error("Veuillez ajouter au moins une image ou une vidéo");
             return;
         }
         if (formData.tags.length === 0) {
@@ -180,39 +191,82 @@ export default function NewRealizationPage() {
                             ></textarea>
                         </div>
 
-                        {/* Images */}
-                        <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-2">Galerie Photos (Max 10)</label>
+                        {/* Multimedia Section */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                             {/* Images */}
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-2">Photos (Max 10)</label>
+                                <div className="grid grid-cols-2 gap-4 mb-4">
+                                    {formData.images.map((url, index) => (
+                                        <div key={index} className="relative aspect-square rounded-xl overflow-hidden group bg-slate-100 border border-slate-200">
+                                            <img src={url} alt={`Upload ${index}`} className="w-full h-full object-cover" />
+                                            <button
+                                                type="button"
+                                                onClick={() => removeImage(index)}
+                                                className="absolute top-2 right-2 p-1.5 bg-white/90 text-red-500 rounded-lg shadow-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50"
+                                            >
+                                                <X size={16} />
+                                            </button>
+                                        </div>
+                                    ))}
 
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-4">
-                                {formData.images.map((url, index) => (
-                                    <div key={index} className="relative aspect-square rounded-xl overflow-hidden group bg-slate-100 border border-slate-200">
-                                        <img src={url} alt={`Upload ${index}`} className="w-full h-full object-cover" />
+                                    {formData.images.length < 10 && (
+                                        <div className="relative aspect-square bg-slate-50 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center text-slate-400 hover:border-primary hover:text-primary hover:bg-slate-100 transition-all cursor-pointer group">
+                                            {uploading ? (
+                                                <Loader2 className="animate-spin" />
+                                            ) : (
+                                                <>
+                                                    <UploadCloud size={24} className="mb-2 group-hover:scale-110 transition-transform" />
+                                                    <span className="text-xs font-bold">Ajouter Photo</span>
+                                                </>
+                                            )}
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                multiple
+                                                onChange={(e) => handleFileUpload(e, 'image')}
+                                                disabled={uploading}
+                                                className="absolute inset-0 opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Video */}
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-2">Vidéo du projet</label>
+                                {formData.video ? (
+                                    <div className="relative aspect-video rounded-xl overflow-hidden bg-black group border border-slate-200">
+                                        <video src={formData.video} className="w-full h-full object-cover" />
+                                        <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                                             <div className="w-12 h-12 bg-white/30 backdrop-blur-md rounded-full flex items-center justify-center text-white">
+                                                 <Check size={24} />
+                                             </div>
+                                        </div>
                                         <button
                                             type="button"
-                                            onClick={() => removeImage(index)}
+                                            onClick={removeVideo}
                                             className="absolute top-2 right-2 p-1.5 bg-white/90 text-red-500 rounded-lg shadow-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50"
                                         >
                                             <X size={16} />
                                         </button>
                                     </div>
-                                ))}
-
-                                {formData.images.length < 10 && (
-                                    <div className="relative aspect-square bg-slate-50 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center text-slate-400 hover:border-primary hover:text-primary hover:bg-slate-100 transition-all cursor-pointer group">
+                                ) : (
+                                    <div className="relative aspect-video bg-slate-50 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center text-slate-400 hover:border-primary hover:text-primary hover:bg-slate-100 transition-all cursor-pointer group">
                                         {uploading ? (
                                             <Loader2 className="animate-spin" />
                                         ) : (
                                             <>
                                                 <UploadCloud size={24} className="mb-2 group-hover:scale-110 transition-transform" />
-                                                <span className="text-xs font-bold">Ajouter</span>
+                                                <span className="text-sm font-bold">Ajouter une Vidéo</span>
+                                                <span className="text-[10px] mt-1 opacity-70">MP4, MOV (Max 50MB recommandé)</span>
                                             </>
                                         )}
                                         <input
                                             type="file"
-                                            accept="image/*"
-                                            multiple
-                                            onChange={handleImageUpload}
+                                            accept="video/*"
+                                            onChange={(e) => handleFileUpload(e, 'video')}
                                             disabled={uploading}
                                             className="absolute inset-0 opacity-0 cursor-pointer disabled:cursor-not-allowed"
                                         />
