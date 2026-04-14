@@ -37,6 +37,7 @@ export async function generateMetadata({ params: { id } }) {
             openGraph: {
                 title,
                 description,
+                type: project.video ? 'video.other' : 'website',
                 url: `https://sdkbatiment.com/realisations/${id}`,
                 images: [
                     {
@@ -46,12 +47,32 @@ export async function generateMetadata({ params: { id } }) {
                         alt: project.title,
                     },
                 ],
+                ...(project.video && {
+                    videos: [
+                        {
+                            url: project.video,
+                            width: 1280,
+                            height: 720,
+                            type: 'video/mp4' // Assumes mp4 standard for uploaded videos
+                        }
+                    ]
+                })
             },
             twitter: {
-                card: 'summary_large_image',
+                card: project.video ? 'player' : 'summary_large_image',
                 title,
                 description,
                 images: [`/realisations/${id}/opengraph-image`],
+                ...(project.video && {
+                    players: [
+                        {
+                            playerUrl: project.video,
+                            streamUrl: project.video,
+                            width: 1280,
+                            height: 720
+                        }
+                    ]
+                })
             },
         };
     } catch {
