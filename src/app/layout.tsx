@@ -115,6 +115,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           }}
         />
 
+        {/* Umami Analytics */}
+        <Script
+          defer
+          src="https://analytics.sdkbatiment.com/script.js"
+          data-website-id="101bba33-4181-4001-b049-eccfc764564c"
+        />
+
         <Providers>
           <LayoutWrapper>
             <Suspense fallback={null}>
