@@ -61,13 +61,14 @@ export default async function Image({ params }: { params: { id: string } }) {
         <div style={{ display: 'flex', width: '100%', height: '100%', alignItems: 'center', marginTop: 40 }}>
           
           {/* Left Side: Project Main Image */}
-          <div style={{ display: 'flex', width: '50%', justifyContent: 'center', alignItems: 'center' }}>
+          <div style={{ display: 'flex', width: '50%', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
             <div style={{ 
               display: 'flex',
               padding: '12px',
               background: '#fff',
               borderRadius: '24px',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.1)'
+              boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
+              position: 'relative'
             }}>
                 <img
                     src={project.images && project.images[0] ? project.images[0] : 'https://sdkbatiment.com/logo.png'}
@@ -79,6 +80,34 @@ export default async function Image({ params }: { params: { id: string } }) {
                         borderRadius: '16px',
                     }}
                 />
+                
+                {/* Play Button Overlay if video exists */}
+                {project.video && (
+                    <div style={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        width: 120,
+                        height: 120,
+                        background: 'rgba(255, 255, 255, 0.6)',
+                        borderRadius: '100px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        border: '4px solid #fff',
+                        boxShadow: '0 10px 30px rgba(0,0,0,0.3)'
+                    }}>
+                        <div style={{
+                            width: 0,
+                            height: 0,
+                            borderTop: '25px solid transparent',
+                            borderBottom: '25px solid transparent',
+                            borderLeft: '40px solid #fff',
+                            marginLeft: '10px'
+                        }} />
+                    </div>
+                )}
             </div>
           </div>
 
