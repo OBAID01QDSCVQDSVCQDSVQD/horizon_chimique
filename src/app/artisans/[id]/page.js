@@ -6,6 +6,25 @@ import Link from 'next/link';
 import WhatsAppButton from '@/components/WhatsAppButton';
 import { MapPin, Phone, Mail, Globe, Calendar, CheckCircle2, Star, ArrowRight, MessageCircle } from 'lucide-react';
 import ReviewSection from '@/components/ReviewSection';
+import { buildMetadata } from '@/lib/metadata';
+
+export async function generateMetadata({ params: { id } }) {
+    await dbConnect();
+    try {
+        const artisan = await User.findById(id).lean();
+        if (!artisan || artisan.role !== 'artisan') return { title: 'Artisan | SDK Batiment' };
+
+        const name = artisan.companyName || artisan.name;
+        const specialty = artisan.specialty ? ` - Spécialiste en ${artisan.specialty}` : '';
+        const title = `${name}${specialty} | Artisan Partenaire SDK Batiment`;
+        const description = artisan.bio?.substring(0, 160) || `Découvrez le profil professionnel de ${name} sur SDK Batiment.`;
+        const image = artisan.image || '/og-image.jpg';
+
+        return buildMetadata(title, description, `/artisans/${id}`, image);
+    } catch {
+        return { title: 'Artisan | SDK Batiment' };
+    }
+}
 
 export default async function ArtisanProfile({ params }) {
     const { id } = params;

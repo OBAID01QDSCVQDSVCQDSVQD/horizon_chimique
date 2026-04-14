@@ -40,7 +40,7 @@ export async function generateMetadata({ params: { id } }) {
                 url: `https://sdkbatiment.com/realisations/${id}`,
                 images: [
                     {
-                        url: defaultImage,
+                        url: `/realisations/${id}/opengraph-image`,
                         width: 1200,
                         height: 630,
                         alt: project.title,
@@ -51,7 +51,7 @@ export async function generateMetadata({ params: { id } }) {
                 card: 'summary_large_image',
                 title,
                 description,
-                images: [defaultImage],
+                images: [`/realisations/${id}/opengraph-image`],
             },
         };
     } catch {

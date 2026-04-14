@@ -19,7 +19,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return buildMetadata(
     service.title,
     service.description.substring(0, 160),
-    `/services/${params.slug}`
+    `/services/${params.slug}`,
+    service.image
   );
 }
 

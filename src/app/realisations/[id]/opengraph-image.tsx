@@ -1,0 +1,148 @@
+import { ImageResponse } from 'next/og';
+import dbConnect from '@/lib/db';
+import Realization from '@/models/Realization';
+import '@/models/User'; // Ensure User model is loaded for populate
+
+export const runtime = 'nodejs';
+
+export const alt = 'Réalisation SDK Batiment';
+export const size = { width: 1200, height: 630 };
+export const contentType = 'image/png';
+
+export default async function Image({ params }: { params: { id: string } }) {
+  await dbConnect();
+  
+  const project = await (Realization as any).findById(params.id)
+    .populate('artisan', 'companyName name')
+    .lean();
+
+  if (!project) {
+    return new ImageResponse(
+      (
+        <div style={{ background: '#0f172a', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 64, fontWeight: 'bold' }}>
+          SDK Batiment
+        </div>
+      ),
+      { ...size }
+    );
+  }
+
+  const artisanName = (project.artisan as any)?.companyName || (project.artisan as any)?.name || 'Artisan Partenaire';
+
+  return new ImageResponse(
+    (
+      <div
+        style={{
+          background: 'linear-gradient(to bottom right, #ffffff, #f8fafc)',
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '60px',
+          position: 'relative',
+        }}
+      >
+        {/* Background Decorative Circles */}
+        <div style={{ position: 'absolute', top: -100, left: -100, width: 400, height: 400, borderRadius: '50%', background: '#10b981', opacity: 0.05 }} />
+        <div style={{ position: 'absolute', bottom: -50, right: -50, width: 300, height: 300, borderRadius: '50%', background: '#10b981', opacity: 0.08 }} />
+
+        {/* Brand Header */}
+        <div style={{ display: 'flex', alignItems: 'center', position: 'absolute', top: 50, left: 60 }}>
+          <div style={{ width: 12, height: 40, background: '#10b981', borderRadius: 4, marginRight: 15 }} />
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontSize: 28, fontWeight: 'black', color: '#0f172a', letterSpacing: '2px' }}>SDK BATIMENT</span>
+            <span style={{ fontSize: 16, fontWeight: 'bold', color: '#10b981' }}>CHANTIER RÉALISÉ</span>
+          </div>
+        </div>
+
+        {/* Project Layout */}
+        <div style={{ display: 'flex', width: '100%', height: '100%', alignItems: 'center', marginTop: 40 }}>
+          
+          {/* Left Side: Project Main Image */}
+          <div style={{ display: 'flex', width: '50%', justifyContent: 'center', alignItems: 'center' }}>
+            <div style={{ 
+              display: 'flex',
+              padding: '12px',
+              background: '#fff',
+              borderRadius: '24px',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.1)'
+            }}>
+                <img
+                    src={project.images && project.images[0] ? project.images[0] : 'https://sdkbatiment.com/logo.png'}
+                    alt={project.title}
+                    style={{
+                        width: 450,
+                        height: 450,
+                        objectFit: 'cover',
+                        borderRadius: '16px',
+                    }}
+                />
+            </div>
+          </div>
+
+          {/* Right Side: Details */}
+          <div style={{ display: 'flex', flexDirection: 'column', width: '50%', paddingLeft: 60 }}>
+            {/* Tag / Category Badge */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+                {project.tags && project.tags.slice(0, 2).map((tag: string) => (
+                    <span key={tag} style={{ 
+                        fontSize: 16, 
+                        fontWeight: 800, 
+                        background: '#f1f5f9', 
+                        color: '#64748b', 
+                        padding: '6px 14px', 
+                        borderRadius: '8px',
+                        border: '1px solid #e2e8f0'
+                    }}>
+                        {tag.toUpperCase()}
+                    </span>
+                ))}
+            </div>
+
+            <h1 style={{ 
+              fontSize: 56, 
+              fontWeight: 900, 
+              color: '#0f172a', 
+              lineHeight: 1.1, 
+              marginBottom: 20,
+              maxWidth: '100%' 
+            }}>
+              {project.title}
+            </h1>
+
+            {/* Artisan Info Box */}
+            <div style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                background: '#f8fafc', 
+                padding: '20px', 
+                borderRadius: '16px',
+                border: '2px solid #e2e8f0'
+            }}>
+                <span style={{ fontSize: 16, color: '#64748b', fontWeight: 'bold', marginBottom: 5 }}>ARTISAN PARTENAIRE :</span>
+                <span style={{ fontSize: 24, color: '#0f172a', fontWeight: 800 }}>{artisanName}</span>
+            </div>
+
+            {/* Social Proof Mini Bar */}
+            <div style={{ display: 'flex', marginTop: 30, alignItems: 'center', gap: 15 }}>
+                <div style={{ display: 'flex', alignItems: 'center', background: '#ecfdf5', color: '#059669', padding: '8px 16px', borderRadius: '100px' }}>
+                    <span style={{ fontSize: 18, fontWeight: 900 }}>✓ TRAVAIL GARANTI</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', background: '#eff6ff', color: '#2563eb', padding: '8px 16px', borderRadius: '100px' }}>
+                    <span style={{ fontSize: 18, fontWeight: 900 }}>★ QUALITÉ CERTIFIÉE</span>
+                </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{ position: 'absolute', bottom: 40, right: 60, display: 'flex', alignItems: 'center' }}>
+           <span style={{ fontSize: 18, color: '#94a3b8', fontWeight: 600 }}>Découvrez plus sur sdkbatiment.com</span>
+        </div>
+      </div>
+    ),
+    { ...size }
+  );
+}
