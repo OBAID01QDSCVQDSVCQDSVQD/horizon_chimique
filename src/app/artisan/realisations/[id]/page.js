@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Loader2, ArrowLeft, Calendar, MapPin, Tag, Edit, X, UserCircle, Maximize2 } from 'lucide-react';
 import ProjectGalleryFB from '@/components/ProjectGalleryFB';
+import { toast } from 'react-hot-toast';
 
 export default function RealizationDetailPage() {
     const { id } = useParams();
@@ -34,9 +35,20 @@ export default function RealizationDetailPage() {
                     <Link href="/artisan/realisations" className="flex items-center text-slate-600 hover:text-slate-900 font-bold text-sm transition-colors">
                         <ArrowLeft size={18} className="mr-2" /> Retour
                     </Link>
-                    <Link href={`/artisan/realisations/${id}/edit`} className="flex items-center bg-slate-900 hover:bg-black text-white px-4 py-2 rounded-full shadow-lg transition-all active:scale-95 font-bold text-sm">
-                        <Edit size={16} className="mr-2" /> Modifier
-                    </Link>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => {
+                                navigator.clipboard.writeText(`https://sdkbatiment.com/realisations/${id}`);
+                                toast.success("Lien copié ! Vous pouvez le partager.");
+                            }}
+                            className="flex items-center bg-blue-50 hover:bg-blue-100 text-blue-600 px-4 py-2 rounded-full shadow-sm transition-all active:scale-95 font-bold text-sm border border-blue-200"
+                        >
+                            Partager
+                        </button>
+                        <Link href={`/artisan/realisations/${id}/edit`} className="flex items-center bg-slate-900 hover:bg-black text-white px-4 py-2 rounded-full shadow-lg transition-all active:scale-95 font-bold text-sm">
+                            <Edit size={16} className="mr-2" /> Modifier
+                        </Link>
+                    </div>
                 </div>
             </div>
 
