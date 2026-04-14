@@ -309,7 +309,7 @@ export default function NewRealizationPage() {
                     <div className="p-6 bg-slate-50 border-t border-slate-200 flex justify-end">
                         <button
                             type="submit"
-                            disabled={loading || uploading}
+                            disabled={loading || uploadingType !== null}
                             className="bg-primary hover:bg-primary-dark text-white font-bold py-3 px-8 rounded-xl shadow-lg shadow-primary/20 transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {loading ? <Loader2 className="animate-spin" /> : <Save size={20} />}
