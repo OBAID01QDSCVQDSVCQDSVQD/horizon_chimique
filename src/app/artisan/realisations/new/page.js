@@ -9,7 +9,7 @@ import { toast } from 'react-hot-toast';
 export default function NewRealizationPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
-    const [uploading, setUploading] = useState(false);
+    const [uploadingType, setUploadingType] = useState(null); // 'image' or 'video'
     const [uploadProgress, setUploadProgress] = useState(0);
 
     const [formData, setFormData] = useState({
@@ -41,7 +41,7 @@ export default function NewRealizationPage() {
             return;
         }
 
-        setUploading(true);
+        setUploadingType(type);
         setUploadProgress(0);
         const newUrls = [];
 
@@ -101,7 +101,7 @@ export default function NewRealizationPage() {
             console.error(error);
             toast.error("Erreur lors de l'upload: " + error.message);
         } finally {
-            setUploading(false);
+            setUploadingType(null);
             setUploadProgress(0);
             e.target.value = '';
         }
@@ -235,7 +235,7 @@ export default function NewRealizationPage() {
 
                                     {formData.images.length < 10 && (
                                         <div className="relative aspect-square bg-slate-50 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center text-slate-400 hover:border-primary hover:text-primary hover:bg-slate-100 transition-all cursor-pointer group">
-                                            {uploading ? (
+                                            {uploadingType === 'image' ? (
                                                 <Loader2 className="animate-spin" />
                                             ) : (
                                                 <>
@@ -248,7 +248,7 @@ export default function NewRealizationPage() {
                                                 accept="image/*"
                                                 multiple
                                                 onChange={(e) => handleFileUpload(e, 'image')}
-                                                disabled={uploading}
+                                                disabled={uploadingType !== null}
                                                 className="absolute inset-0 opacity-0 cursor-pointer disabled:cursor-not-allowed"
                                             />
                                         </div>
@@ -277,7 +277,7 @@ export default function NewRealizationPage() {
                                     </div>
                                 ) : (
                                     <div className="relative aspect-video bg-slate-50 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center text-slate-400 hover:border-primary hover:text-primary hover:bg-slate-100 transition-all cursor-pointer group overflow-hidden">
-                                        {uploading ? (
+                                        {uploadingType === 'video' ? (
                                             <div className="flex flex-col items-center z-10 w-full px-8">
                                                 <Loader2 className="animate-spin mb-3 text-primary" size={36} />
                                                 <span className="font-bold text-slate-700 text-lg mb-1">{uploadProgress}%</span>
@@ -297,7 +297,7 @@ export default function NewRealizationPage() {
                                             type="file"
                                             accept="video/*"
                                             onChange={(e) => handleFileUpload(e, 'video')}
-                                            disabled={uploading}
+                                            disabled={uploadingType !== null}
                                             className="absolute inset-0 opacity-0 cursor-pointer disabled:cursor-not-allowed z-20"
                                         />
                                     </div>
