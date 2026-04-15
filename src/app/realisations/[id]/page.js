@@ -31,6 +31,7 @@ export async function generateMetadata({ params: { id } }) {
         const title = `${project.title} - par ${project.artisan?.companyName || project.artisan?.name} | SDK Batiment`;
         const description = project.description?.substring(0, 160) || "Découvrez nos réalisations chez SDK Batiment.";
         const defaultImage = project.images && project.images.length > 0 ? project.images[0] : '/logo.png';
+        const ogImage = defaultImage.startsWith('http') ? defaultImage : `https://sdkbatiment.com${defaultImage}`;
 
         return {
             title,
@@ -42,7 +43,7 @@ export async function generateMetadata({ params: { id } }) {
                 url: `https://sdkbatiment.com/realisations/${id}`,
                 images: [
                     {
-                        url: `https://sdkbatiment.com/realisations/${id}/opengraph-image`,
+                        url: ogImage,
                         width: 1200,
                         height: 630,
                         alt: project.title,
@@ -54,7 +55,7 @@ export async function generateMetadata({ params: { id } }) {
                             url: project.video,
                             width: 1280,
                             height: 720,
-                            type: 'video/mp4' // Assumes mp4 standard for uploaded videos
+                            type: 'video/mp4'
                         }
                     ]
                 })
@@ -63,7 +64,7 @@ export async function generateMetadata({ params: { id } }) {
                 card: project.video ? 'player' : 'summary_large_image',
                 title,
                 description,
-                images: [`https://sdkbatiment.com/realisations/${id}/opengraph-image`],
+                images: [ogImage],
                 ...(project.video && {
                     players: [
                         {
