@@ -82,7 +82,47 @@ const UserSchema = new mongoose.Schema({
     // Password Reset
     resetPasswordToken: { type: String, select: false },
     resetPasswordExpires: { type: Date, select: false },
+    slug: {
+        type: String,
+        unique: true,
+        sparse: true,
+        index: true
+    }
 }, { timestamps: true });
+
+// Auto-generate clean slug for artisans without random symbols (unless collision)
+UserSchema.pre('save', async function(next) {
+    if (this.role === 'artisan' && (!this.slug || this.isModified('companyName') || this.isModified('name'))) {
+        let baseSlug = this.companyName || this.name || 'artisan';
+        
+        if (this.specialty) {
+            baseSlug += ` ${this.specialty}`;
+        }
+        // Extract city from address if possible
+        if (this.address) {
+            const city = this.address.split(',')[0].split('-')[0].trim();
+            baseSlug += ` ${city}`;
+        }
+
+        let cleanSlug = baseSlug
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, "") // Remove accents
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-') // Keep only letters and numbers
+            .replace(/^-+|-+$/g, ''); // Trim leading/trailing dashes
+            
+        // Final uniqueness check
+        const User = mongoose.models.User || mongoose.model('User');
+        const existing = await User.findOne({ slug: cleanSlug, _id: { $ne: this._id } });
+        
+        if (existing) {
+            // Only add suffix if name collision happens
+            cleanSlug = `${cleanSlug}-${this._id.toString().slice(-4)}`;
+        }
+
+        this.slug = cleanSlug;
+    }
+    next();
+});
 
 // Check if model already exists to prevent overwrite in dev
 export default mongoose.models.User || mongoose.model('User', UserSchema);

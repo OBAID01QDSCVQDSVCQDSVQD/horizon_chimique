@@ -11,7 +11,9 @@ import { buildMetadata } from '@/lib/metadata';
 export async function generateMetadata({ params: { id } }) {
     await dbConnect();
     try {
-        const artisan = await User.findById(id).lean();
+        const isObjectId = /^[0-9a-fA-F]{24}$/.test(id);
+        const query = isObjectId ? { _id: id } : { slug: id };
+        const artisan = await User.findOne(query).lean();
         if (!artisan || artisan.role !== 'artisan') return { title: 'Artisan | SDK Batiment' };
 
         const name = artisan.companyName || artisan.name;
@@ -24,7 +26,7 @@ export async function generateMetadata({ params: { id } }) {
             'artisan Tunisie', 'SDK Batiment', 'étanchéité', 'travaux bâtiment',
         ].filter(Boolean).join(', ');
 
-        const base = buildMetadata(title, description, `/artisans/${id}`, image);
+        const base = buildMetadata(title, description, `/artisans/${artisan.slug || id}`, image);
         return { ...base, keywords };
     } catch {
         return { title: 'Artisan | SDK Batiment' };
@@ -40,11 +42,14 @@ export default async function ArtisanProfile({ params }) {
     let projects = [];
 
     try {
-        artisan = await User.findById(id);
+        const isObjectId = /^[0-9a-fA-F]{24}$/.test(id);
+        const query = isObjectId ? { _id: id } : { slug: id };
+
+        artisan = await User.findOne(query);
         if (!artisan || artisan.role !== 'artisan') {
             return notFound();
         }
-        projects = await Realization.find({ artisan: id, isVisible: true }).sort({ createdAt: -1 });
+        projects = await Realization.find({ artisan: artisan._id, isVisible: true }).sort({ createdAt: -1 });
     } catch (e) {
         return notFound();
     }
@@ -57,7 +62,7 @@ export default async function ArtisanProfile({ params }) {
         name: artisanName,
         description: artisan.bio || `Artisan partenaire SDK Batiment`,
         image: artisan.image || '',
-        url: `https://sdkbatiment.com/artisans/${id}`,
+        url: `https://sdkbatiment.com/artisans/${artisan.slug || id}`,
         ...(artisan.phone && { telephone: artisan.phone }),
         ...(artisan.email && { email: artisan.email }),
         ...(artisan.address && {

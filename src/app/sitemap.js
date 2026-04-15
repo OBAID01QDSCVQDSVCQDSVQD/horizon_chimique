@@ -61,12 +61,12 @@ export default async function sitemap() {
     // Dynamic Artisan Profiles
     const artisans = await User.find(
         { role: 'artisan' },
-        { _id: 1, updatedAt: 1 }
+        { _id: 1, updatedAt: 1, slug: 1 }
     ).lean();
     const artisanUrls = artisans.map((a) => ({
-        url: `${baseUrl}/artisans/${a._id}`,
+        url: `${baseUrl}/artisans/${a.slug || a._id}`,
         lastModified: new Date(a.updatedAt),
-        changeFrequency: 'weekly',
+        changeFrequency: 'monthly',
         priority: 0.8,
     }));
 
