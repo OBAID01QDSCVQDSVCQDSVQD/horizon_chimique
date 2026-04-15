@@ -36,8 +36,38 @@ const RealizationSchema = new mongoose.Schema({
     isVisible: {
         type: Boolean,
         default: true
+    },
+    slug: {
+        type: String,
+        unique: true,
+        sparse: true, // Allows nulls for old documents until they are updated
+        index: true
     }
 }, { timestamps: true });
+
+// Auto-generate slug before saving
+RealizationSchema.pre('save', function(next) {
+    if (!this.slug && this.title) {
+        let baseSlug = this.title;
+        if (this.location) {
+            baseSlug += ` ${this.location}`;
+        }
+        
+        // Convert to SEO-friendly slug
+        this.slug = baseSlug
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, "") // Remove accents
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric with -
+            .replace(/^-+|-+$/g, ''); // Trim -
+            
+        // Append part of ID to ensure absolute uniqueness
+        if (this.isNew || !this.slug) {
+             const shortId = this._id.toString().slice(-4);
+             this.slug = `${this.slug}-${shortId}`;
+        }
+    }
+    next();
+});
 
 // Check if model exists and if 'likes' is still a Number (old schema)
 if (mongoose.models.Realization) {

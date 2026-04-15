@@ -25,7 +25,10 @@ import ReviewSection from "@/components/ReviewSection";
 export async function generateMetadata({ params: { id } }) {
     await dbConnect();
     try {
-        const project = await Realization.findById(id).populate('artisan', 'companyName name').lean();
+        const isObjectId = /^[0-9a-fA-F]{24}$/.test(id);
+        const query = isObjectId ? { _id: id } : { slug: id };
+
+        const project = await Realization.findOne(query).populate('artisan', 'companyName name').lean();
         if (!project || !project.isVisible) return { title: 'Projet Introuvable | SDK Batiment' };
 
         const title = `${project.title} - par ${project.artisan?.companyName || project.artisan?.name} | SDK Batiment`;
@@ -53,7 +56,7 @@ export async function generateMetadata({ params: { id } }) {
             description,
             keywords,
             alternates: {
-                canonical: `https://sdkbatiment.com/realisations/${id}`,
+                canonical: `https://sdkbatiment.com/realisations/${project.slug || id}`,
             },
             openGraph: {
                 title,
@@ -122,7 +125,10 @@ export default async function PublicRealizationDetail({ params }) {
 
     let project;
     try {
-        project = await Realization.findById(id).populate('artisan', 'name companyName image phone email whatsapp');
+        const isObjectId = /^[0-9a-fA-F]{24}$/.test(id);
+        const query = isObjectId ? { _id: id } : { slug: id };
+
+        project = await Realization.findOne(query).populate('artisan', 'name companyName image phone email whatsapp');
         if (!project || !project.isVisible) return notFound();
     } catch (e) {
         return notFound();

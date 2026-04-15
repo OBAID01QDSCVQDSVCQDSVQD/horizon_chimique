@@ -49,12 +49,12 @@ export default async function sitemap() {
     // Dynamic Realisations - HIGH PRIORITY for Google traffic
     const realisations = await Realization.find(
         { isVisible: true },
-        { _id: 1, updatedAt: 1, video: 1 }
+        { _id: 1, updatedAt: 1, slug: 1, video: 1 }
     ).lean();
     const realisationUrls = realisations.map((r) => ({
-        url: `${baseUrl}/realisations/${r._id}`,
+        url: `${baseUrl}/realisations/${r.slug || r._id}`,
         lastModified: new Date(r.updatedAt),
-        changeFrequency: 'weekly',
+        changeFrequency: 'monthly',
         priority: 0.9,
     }));
 
