@@ -2,6 +2,7 @@ import dbConnect from '@/lib/db';
 import Solution from '@/models/Solution';
 import Product from '@/models/Product';
 import Realization from '@/models/Realization';
+import User from '@/models/User';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,7 +19,8 @@ export default async function sitemap() {
         '/contact',
         '/products',
         '/realisations',
-        '/gallery'
+        '/gallery',
+        '/catalogue',
     ].map((page) => ({
         url: `${baseUrl}${page}`,
         lastModified: new Date(),
@@ -56,10 +58,24 @@ export default async function sitemap() {
         priority: 0.9,
     }));
 
+    // Dynamic Artisan Profiles
+    const artisans = await User.find(
+        { role: 'artisan' },
+        { _id: 1, updatedAt: 1 }
+    ).lean();
+    const artisanUrls = artisans.map((a) => ({
+        url: `${baseUrl}/artisans/${a._id}`,
+        lastModified: new Date(a.updatedAt),
+        changeFrequency: 'weekly',
+        priority: 0.8,
+    }));
+
     return [
         ...staticPages,
         ...solutionUrls,
         ...productUrls,
         ...realisationUrls,
+        ...artisanUrls,
     ];
 }
+

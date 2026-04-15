@@ -19,8 +19,13 @@ export async function generateMetadata({ params: { id } }) {
         const title = `${name}${specialty} | Artisan Partenaire SDK Batiment`;
         const description = artisan.bio?.substring(0, 160) || `Découvrez le profil professionnel de ${name} sur SDK Batiment.`;
         const image = artisan.image || '/og-image.jpg';
+        const keywords = [
+            name, artisan.specialty, artisan.address,
+            'artisan Tunisie', 'SDK Batiment', 'étanchéité', 'travaux bâtiment',
+        ].filter(Boolean).join(', ');
 
-        return buildMetadata(title, description, `/artisans/${id}`, image);
+        const base = buildMetadata(title, description, `/artisans/${id}`, image);
+        return { ...base, keywords };
     } catch {
         return { title: 'Artisan | SDK Batiment' };
     }
@@ -44,8 +49,42 @@ export default async function ArtisanProfile({ params }) {
         return notFound();
     }
 
+    // JSON-LD LocalBusiness for Google
+    const artisanName = artisan.companyName || artisan.name;
+    const jsonLd = {
+        '@context': 'https://schema.org',
+        '@type': 'LocalBusiness',
+        name: artisanName,
+        description: artisan.bio || `Artisan partenaire SDK Batiment`,
+        image: artisan.image || '',
+        url: `https://sdkbatiment.com/artisans/${id}`,
+        ...(artisan.phone && { telephone: artisan.phone }),
+        ...(artisan.email && { email: artisan.email }),
+        ...(artisan.address && {
+            address: {
+                '@type': 'PostalAddress',
+                streetAddress: artisan.address,
+                addressCountry: 'TN',
+            },
+        }),
+        ...(artisan.specialty && { knowsAbout: artisan.specialty }),
+    };
+
+    const breadcrumbJsonLd = {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Accueil', item: 'https://sdkbatiment.com' },
+            { '@type': 'ListItem', position: 2, name: 'Artisans' },
+            { '@type': 'ListItem', position: 3, name: artisanName },
+        ],
+    };
+
     return (
         <div className="min-h-screen bg-slate-50">
+            {/* JSON-LD for Google */}
+            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
             {/* Header / Cover */}
             <div className="h-64 bg-slate-900 relative overflow-hidden">
                 <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20"></div>
