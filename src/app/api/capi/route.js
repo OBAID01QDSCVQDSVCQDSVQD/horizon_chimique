@@ -44,7 +44,7 @@ export async function POST(req) {
                     ph: userData.phone ? hashData(userData.phone.replace(/[^0-9]/g, '').replace(/^0+/, '').replace(/^(?!216)(.*)/, '216$1')) : undefined,
                     fn: firstName ? hashData(firstName) : undefined,
                     ln: lastName ? hashData(lastName) : undefined,
-                    external_id: userData.external_id ? hashData(userData.external_id) : undefined,
+                    external_id: userData.external_id || undefined,
                     fbc: userData.fbc || undefined,
                     fbp: userData.fbp || undefined,
                 },
