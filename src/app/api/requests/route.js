@@ -42,8 +42,11 @@ export async function POST(req) {
         }
 
         // Basic validation
-        if (!data.message) {
-            return NextResponse.json({ success: false, error: "Message requis" }, { status: 400 });
+        if (!data.fullName) {
+            return NextResponse.json({ success: false, error: "Nom et Prénom requis" }, { status: 400 });
+        }
+        if (!data.phone) {
+            return NextResponse.json({ success: false, error: "Numéro WhatsApp requis" }, { status: 400 });
         }
 
         const newRequest = await Request.create(data);
@@ -51,7 +54,7 @@ export async function POST(req) {
         // Send SMS notification to admin asynchronously (fire and forget)
         try {
             const reqType = data.type?.toUpperCase() || 'DEMANDE';
-            const clientName = `${data.firstName || ''} ${data.lastName || ''}`.trim() || 'Client';
+            const clientName = data.fullName || 'Client';
             const clientPhone = data.phone || data.whatsapp || 'Non spécifié';
             
             let smsMessage = `🚨 [${reqType}]\nDe: ${clientName}\nTel: ${clientPhone}`;

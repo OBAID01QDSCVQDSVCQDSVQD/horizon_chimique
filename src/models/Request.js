@@ -2,10 +2,11 @@ import mongoose from 'mongoose';
 
 const RequestSchema = new mongoose.Schema({
     type: { type: String, required: true, enum: ['diagnostic', 'reclamation', 'rdv', 'devis'] },
-    message: { type: String, required: true },
+    fullName: { type: String, required: true },
+    message: { type: String },
     firstName: { type: String },
     lastName: { type: String },
-    phone: { type: String },
+    phone: { type: String, required: true },
     whatsapp: { type: String },
     email: { type: String },
     projectName: { type: String },

@@ -48,6 +48,7 @@ export default function Home() {
     }
   }, [searchParams]);
   const [supportForm, setSupportForm] = useState({
+    fullName: '',
     message: '',
     date: '',
     surface: '',
@@ -143,6 +144,7 @@ export default function Home() {
         toast.success("Votre demande a bien été envoyée !");
         setSupportType(null);
         setSupportForm({
+          fullName: '',
           message: '',
           date: '',
           surface: '',
@@ -448,6 +450,13 @@ export default function Home() {
 
                 {(supportType === 'diagnostic' || supportType === 'reclamation' || supportType === 'rdv') && (
                   <div className="space-y-4">
+                    {/* Full Name */}
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-1">Nom et Prénom</label>
+                      <input type="text" required className="w-full px-4 py-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-primary text-sm bg-blue-50/10"
+                        value={supportForm.fullName} onChange={e => setSupportForm({ ...supportForm, fullName: e.target.value })} placeholder="Ex: Ahmed Ben Salah" />
+                    </div>
+
                     {/* Location */}
                     <div className="space-y-1">
                       <label className="text-sm font-bold text-slate-700">
@@ -493,10 +502,9 @@ export default function Home() {
 
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-1">
-                    {supportType === 'diagnostic' ? 'Description du problème' : supportType === 'reclamation' ? 'Détails de la réclamation' : 'Message'}
+                    {supportType === 'diagnostic' ? 'Description du problème' : supportType === 'reclamation' ? 'Détails de la réclamation' : 'Message'} (Facultatif)
                   </label>
                   <textarea
-                    required
                     rows={4}
                     className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary outline-none bg-slate-50 text-sm"
                     placeholder={supportType === 'rdv' ? "Précisez l'objet du rendez-vous..." : "Décrivez votre demande..."}
