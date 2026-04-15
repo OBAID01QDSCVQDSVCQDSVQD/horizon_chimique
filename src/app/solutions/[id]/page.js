@@ -18,7 +18,10 @@ const getIconResult = (iconName) => {
 async function getData(id) {
     await dbConnect();
     try {
-        const solution = await Solution.findById(id).populate({ path: 'relatedProducts', strictPopulate: false });
+        const isObjectId = /^[0-9a-fA-F]{24}$/.test(id);
+        const query = isObjectId ? { _id: id } : { slug: id };
+
+        const solution = await Solution.findOne(query).populate({ path: 'relatedProducts', strictPopulate: false });
         const campaigns = await Campaign.find({ isActive: true }).sort({ createdAt: -1 });
 
         return { solution, campaigns };
@@ -30,7 +33,10 @@ async function getData(id) {
 
 export async function generateMetadata({ params }) {
     await dbConnect();
-    const solution = await Solution.findById(params.id);
+    const isObjectId = /^[0-9a-fA-F]{24}$/.test(params.id);
+    const query = isObjectId ? { _id: params.id } : { slug: params.id };
+    
+    const solution = await Solution.findOne(query).lean();
     if (!solution) return { title: 'Solution introuvable' };
     
     const title = `${solution.title} | SDK Batiment`;
@@ -39,10 +45,13 @@ export async function generateMetadata({ params }) {
     return {
         title,
         description,
+        alternates: {
+            canonical: `https://sdkbatiment.com/solutions/${solution.slug || params.id}`,
+        },
         openGraph: {
             title,
             description,
-            url: `https://sdkbatiment.com/solutions/${params.id}`,
+            url: `https://sdkbatiment.com/solutions/${solution.slug || params.id}`,
             images: [
                 {
                     url: '/logo.png',

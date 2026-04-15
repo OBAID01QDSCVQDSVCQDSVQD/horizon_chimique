@@ -29,11 +29,11 @@ export default async function sitemap() {
     }));
 
     // Dynamic Solutions (Services)
-    const solutions = await Solution.find({}, { _id: 1, updatedAt: 1 }).lean();
+    const solutions = await Solution.find({}, { _id: 1, updatedAt: 1, slug: 1 }).lean();
     const solutionUrls = solutions.map((s) => ({
-        url: `${baseUrl}/solutions/${s._id}`,
+        url: `${baseUrl}/solutions/${s.slug || s._id}`,
         lastModified: new Date(s.updatedAt),
-        changeFrequency: 'weekly',
+        changeFrequency: 'monthly',
         priority: 0.7,
     }));
 
