@@ -40,11 +40,20 @@ export async function generateMetadata({ params }) {
     if (!solution) return { title: 'Solution introuvable' };
     
     const title = `${solution.title} | SDK Batiment`;
-    const description = "Découvrez notre solution technique d'étanchéité: " + solution.title;
+    const description = `${solution.title} en Tunisie - SDK Batiment. Solution professionnelle d'étanchéité et système certifié. Intervention rapide avec produits Horizon Chimique. Devis gratuit.`;
     
     return {
         title,
         description,
+        keywords: [
+            solution.title,
+            'étanchéité Tunisie',
+            'SDK Batiment',
+            'Horizon Chimique',
+            'toiture Tunis',
+            'imperméabilisation',
+            'peinture décorative'
+        ].join(', '),
         alternates: {
             canonical: `https://sdkbatiment.com/solutions/${solution.slug || params.id}`,
         },
@@ -52,6 +61,9 @@ export async function generateMetadata({ params }) {
             title,
             description,
             url: `https://sdkbatiment.com/solutions/${solution.slug || params.id}`,
+            type: 'article',
+            siteName: 'SDK Batiment',
+            locale: 'fr_TN',
             images: [
                 {
                     url: '/logo.png',
@@ -101,11 +113,21 @@ export default async function SolutionDetailPage({ params }) {
         "@context": "https://schema.org",
         "@type": "Service",
         "name": solution.title,
-        "description": "Solution technique SDK Batiment : " + solution.title,
+        "description": solution.description?.replace(/<[^>]*>/g, '').slice(0, 200) || `${solution.title} en Tunisie par SDK Batiment, expert en étanchéité.`,
+        "url": `https://sdkbatiment.com/solutions/${solution.slug || params.id}`,
+        "telephone": "+21653520222",
+        "priceRange": "$$",
+        "image": "https://sdkbatiment.com/logo.png",
         "provider": {
             "@type": "LocalBusiness",
             "name": "SDK Batiment",
-            "url": "https://sdkbatiment.com"
+            "url": "https://sdkbatiment.com",
+            "telephone": "+21653520222",
+            "address": {
+                "@type": "PostalAddress",
+                "addressLocality": "Sousse",
+                "addressCountry": "TN"
+            }
         },
         "areaServed": {
             "@type": "Country",
@@ -126,13 +148,53 @@ export default async function SolutionDetailPage({ params }) {
         }
     };
 
+    const breadcrumbSchema = {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            { "@type": "ListItem", "position": 1, "name": "Accueil", "item": "https://sdkbatiment.com" },
+            { "@type": "ListItem", "position": 2, "name": "Solutions", "item": "https://sdkbatiment.com/solutions" },
+            { "@type": "ListItem", "position": 3, "name": solution.title, "item": `https://sdkbatiment.com/solutions/${solution.slug || params.id}` }
+        ]
+    };
+
+    const faqSchema = {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+            {
+                "@type": "Question",
+                "name": `Qu'est-ce que la solution ${solution.title} ?`,
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": solution.description?.replace(/<[^>]*>/g, '').slice(0, 300) || "Contactez-nous pour en savoir plus sur cette solution technique."
+                }
+            },
+            {
+                "@type": "Question",
+                "name": `Où intervient SDK Batiment pour ${solution.title} ?`,
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "SDK Batiment intervient dans toute la Tunisie : Tunis, Sousse, Sfax, Monastir, Nabeul et autres régions, pour une application garantie."
+                }
+            },
+            {
+                "@type": "Question",
+                "name": `Comment obtenir un devis pour ${solution.title} ?`,
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Contactez-nous directement au +216 53 520 222 ou via notre formulaire de contact sur sdkbatiment.com/contact pour une étude technique gratuite."
+                }
+            }
+        ]
+    };
+
     return (
         <div className="min-h-screen bg-slate-50 pb-20">
             {/* Inject JSON-LD Schema */}
-            <script
-                type="application/ld+json"
-                dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceSchema) }}
-            />
+            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceSchema) }} />
+            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
+            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
             {/* Hero Section */}
             <div className="relative bg-slate-900 pt-32 pb-20 overflow-hidden">
                 <div className="absolute inset-0 opacity-10">
@@ -195,7 +257,7 @@ export default async function SolutionDetailPage({ params }) {
                                 </h2>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                                     {solution.relatedProducts.map(prod => (
-                                        <Link key={prod._id} href={`/products/${prod._id}`} className="group block h-full">
+                                        <Link key={prod._id} href={`/products/${prod.slug || prod._id}`} className="group block h-full">
                                             <div className="border border-slate-200 rounded-xl p-3 sm:p-4 hover:border-primary hover:shadow-md transition-all h-full bg-slate-50/50 hover:bg-white flex flex-row sm:flex-col items-center sm:items-start gap-3 sm:gap-0">
 
                                                 {/* Icon */}
