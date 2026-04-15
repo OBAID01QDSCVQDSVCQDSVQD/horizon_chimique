@@ -3,7 +3,7 @@ import dbConnect from '@/lib/db';
 import Realization from '@/models/Realization';
 import '@/models/User'; // Ensure User model is loaded for populate
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 export const alt = 'Réalisation SDK Batiment';
 export const size = { width: 1200, height: 630 };
