@@ -18,8 +18,7 @@ function DevisForm() {
     
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
-        firstName: '',
-        lastName: '',
+        fullName: '',
         phone: '',
         whatsapp: '',
         email: '',
@@ -53,8 +52,7 @@ function DevisForm() {
                     value: 0.00,
                     currency: 'TND'
                 }, {
-                    firstName: formData.firstName,
-                    lastName: formData.lastName,
+                    fullName: formData.fullName,
                     phone: formData.phone,
                     email: formData.email
                 });
@@ -118,34 +116,18 @@ function DevisForm() {
                     {/* Right Side: Form */}
                     <div className="md:w-2/3 p-8 md:p-12">
                         <form onSubmit={handleSubmit} className="space-y-6">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                {/* First Name */}
-                                <div className="space-y-2">
-                                    <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                                        <User size={14} className="text-primary" /> Prénom *
-                                    </label>
-                                    <input 
-                                        type="text" required
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-primary focus:bg-white transition-all text-sm"
-                                        placeholder="Ex: Ahmed"
-                                        value={formData.firstName}
-                                        onChange={(e) => setFormData({...formData, firstName: e.target.value})}
-                                    />
-                                </div>
-
-                                {/* Last Name */}
-                                <div className="space-y-2">
-                                    <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                                        <User size={14} className="text-primary" /> Nom *
-                                    </label>
-                                    <input 
-                                        type="text" required
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-primary focus:bg-white transition-all text-sm"
-                                        placeholder="Ex: Ben Ali"
-                                        value={formData.lastName}
-                                        onChange={(e) => setFormData({...formData, lastName: e.target.value})}
-                                    />
-                                </div>
+                            {/* Full Name */}
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                                    <User size={14} className="text-primary" /> Nom et Prénom *
+                                </label>
+                                <input 
+                                    type="text" required
+                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-primary focus:bg-white transition-all text-sm"
+                                    placeholder="Ex: Ahmed Ben Salah"
+                                    value={formData.fullName}
+                                    onChange={(e) => setFormData({...formData, fullName: e.target.value})}
+                                />
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
