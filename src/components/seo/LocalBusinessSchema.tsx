@@ -22,19 +22,17 @@ export default function LocalBusinessSchema() {
       "latitude": 35.7333,
       "longitude": 10.5833
     },
-    "areaServed": [
-      { "@type": "City", "name": "Sousse" },
-      { "@type": "City", "name": "Monastir" },
-      { "@type": "City", "name": "Mahdia" },
-      { "@type": "City", "name": "Sfax" },
-      { "@type": "City", "name": "Kairouan" },
-      { "@type": "City", "name": "Tunis" },
-      { "@type": "City", "name": "Nabeul" },
-    ],
+    "description": "Spécialiste en étanchéité de toiture, isolation et peinture décorative en Tunisie. Application des systèmes Horizon Chimique (SELF 60).",
+    "areaServed": {
+      "@type": "Country",
+      "name": "Tunisie"
+    },
     "hasOfferCatalog": {
       "@type": "OfferCatalog",
-      "name": "Produits et Services d'étanchéité",
+      "name": "Systèmes d'étanchéité et Produits",
       "itemListElement": [
+        { "@type": "Offer", "itemOffered": { "@type": "Product", "name": "SELF 60 - Étanchéité liquide" } },
+        { "@type": "Offer", "itemOffered": { "@type": "Product", "name": "HORIFLEX 110 - Étanchéité" } },
         { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Étanchéité toiture" } },
         { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Étanchéité terrasse" } },
         { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Étanchéité sous-sol" } },

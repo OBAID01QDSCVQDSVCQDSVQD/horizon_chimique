@@ -165,6 +165,15 @@ export default async function PublicRealizationDetail({ params }) {
                 url: 'https://sdkbatiment.com/logo.png',
             },
         },
+        ...(project.location && {
+            contentLocation: {
+                '@type': 'Place',
+                name: project.location
+            }
+        }),
+        ...(project.tags && project.tags.length > 0 && {
+            keywords: project.tags.join(', ')
+        }),
         mainEntityOfPage: {
             '@type': 'WebPage',
             '@id': `https://sdkbatiment.com/realisations/${id}`,
