@@ -71,7 +71,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 'https://connect.facebook.net/en_US/fbevents.js');
                 fbq('set', 'autoConfig', false, '${fbPixelId}');
                 fbq('init', '${fbPixelId}');
-                fbq('track', 'PageView');
               `,
             }}
           />

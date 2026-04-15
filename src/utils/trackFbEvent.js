@@ -49,8 +49,30 @@ export function trackFbEvent(eventName, customData = {}, userData = {}) {
     }
 
     // 4. CAPI (server-side)
-    const fbc = getCookie('_fbc');
-    const fbp = getCookie('_fbp');
+    let fbc = getCookie('_fbc');
+    let fbp = getCookie('_fbp');
+
+    // 🌟 ENHANCEMENT: Smart fbc capture from URL if cookie is missing
+    if (!fbc && typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search);
+        const fbclid = urlParams.get('fbclid');
+        if (fbclid) {
+            // Format: fb.1.creationTime.fbclid
+            fbc = `fb.1.${Date.now()}.${fbclid}`;
+            // Store it for this session to ensure 100% coverage on subsequent pages
+            sessionStorage.setItem('hc_fb_fbc', fbc);
+        } else {
+            // Check if we saved it earlier in the session
+            fbc = sessionStorage.getItem('hc_fb_fbc');
+        }
+    }
+
+    // 🌟 ENHANCEMENT: Smart fbp persistence
+    if (!fbp && typeof window !== 'undefined') {
+        fbp = sessionStorage.getItem('hc_fb_fbp');
+    } else if (fbp && typeof window !== 'undefined') {
+        sessionStorage.setItem('hc_fb_fbp', fbp);
+    }
 
     fetch('/api/capi', {
         method: 'POST',

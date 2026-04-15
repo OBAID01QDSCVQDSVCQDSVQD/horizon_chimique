@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import { trackFbEvent } from '@/utils/trackFbEvent';
 
 export default function AnalyticsTracker() {
     const pathname = usePathname();
@@ -42,6 +43,9 @@ export default function AnalyticsTracker() {
         };
 
         trackView();
+        
+        // Track Facebook PageView (Browser + CAPI)
+        trackFbEvent('PageView');
 
         // Heartbeat to track duration/stay time every 20 seconds
         const heartbeatInterval = setInterval(async () => {
