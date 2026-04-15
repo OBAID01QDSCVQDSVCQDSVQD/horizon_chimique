@@ -35,7 +35,10 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     twitter: { card: "summary_large_image" },
     alternates: { canonical: url },
-    robots: { index: true, follow: true }
+    robots: { index: true, follow: true },
+    verification: {
+      google: 'xXI6Wyn-f0bcXJcHXvJjLZ14k2AOJ5PRMvl7GLDk0lw',
+    }
   };
 }
 
