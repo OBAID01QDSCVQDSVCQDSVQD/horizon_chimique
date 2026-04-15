@@ -32,15 +32,18 @@ export async function generateMetadata({ params: { id } }) {
         const description = project.description?.substring(0, 160) || "Découvrez nos réalisations chez SDK Batiment.";
         const defaultImage = project.images && project.images.length > 0 ? project.images[0] : '/logo.png';
         const ogImage = defaultImage.startsWith('http') ? defaultImage : `https://sdkbatiment.com${defaultImage}`;
+        const hasVideo = !!project.video;
 
-        return {
+        // Build base metadata
+        const metadata = {
             title,
             description,
             openGraph: {
                 title,
                 description,
-                type: project.video ? 'video.other' : 'website',
+                type: hasVideo ? 'video.other' : 'website',
                 url: `https://sdkbatiment.com/realisations/${id}`,
+                siteName: 'SDK Batiment',
                 images: [
                     {
                         url: ogImage,
@@ -49,34 +52,45 @@ export async function generateMetadata({ params: { id } }) {
                         alt: project.title,
                     },
                 ],
-                ...(project.video && {
-                    videos: [
-                        {
-                            url: project.video,
-                            width: 1280,
-                            height: 720,
-                            type: 'video/mp4'
-                        }
-                    ]
-                })
             },
             twitter: {
-                card: project.video ? 'player' : 'summary_large_image',
+                card: hasVideo ? 'player' : 'summary_large_image',
                 title,
                 description,
                 images: [ogImage],
-                ...(project.video && {
-                    players: [
-                        {
-                            playerUrl: project.video,
-                            streamUrl: project.video,
-                            width: 1280,
-                            height: 720
-                        }
-                    ]
-                })
             },
         };
+
+        // Add video-specific OG tags if project has video
+        if (hasVideo) {
+            metadata.openGraph.videos = [
+                {
+                    url: project.video,
+                    secureUrl: project.video,
+                    type: 'video/mp4',
+                    width: 1280,
+                    height: 720,
+                }
+            ];
+            metadata.twitter.players = [
+                {
+                    playerUrl: project.video,
+                    streamUrl: project.video,
+                    width: 1280,
+                    height: 720,
+                }
+            ];
+            // Add additional meta tags for better video detection
+            metadata.other = {
+                'og:video': project.video,
+                'og:video:secure_url': project.video,
+                'og:video:type': 'video/mp4',
+                'og:video:width': '1280',
+                'og:video:height': '720',
+            };
+        }
+
+        return metadata;
     } catch {
         return { title: 'Projet | SDK Batiment' };
     }
