@@ -96,8 +96,43 @@ export default async function SolutionDetailPage({ params }) {
 
     const IconComp = getIconResult(solution.icon);
 
+    // JSON-LD Structured Data for AEO
+    const serviceSchema = {
+        "@context": "https://schema.org",
+        "@type": "Service",
+        "name": solution.title,
+        "description": "Solution technique SDK Batiment : " + solution.title,
+        "provider": {
+            "@type": "LocalBusiness",
+            "name": "SDK Batiment",
+            "url": "https://sdkbatiment.com"
+        },
+        "areaServed": {
+            "@type": "Country",
+            "name": "Tunisie"
+        },
+        "hasOfferCatalog": {
+            "@type": "OfferCatalog",
+            "name": "Système " + solution.title,
+            "itemListElement": (solution.features && solution.features.length > 0) 
+                ? solution.features.map(f => ({
+                    "@type": "Offer",
+                    "itemOffered": {
+                        "@type": "Service",
+                        "name": f
+                    }
+                }))
+                : []
+        }
+    };
+
     return (
         <div className="min-h-screen bg-slate-50 pb-20">
+            {/* Inject JSON-LD Schema */}
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceSchema) }}
+            />
             {/* Hero Section */}
             <div className="relative bg-slate-900 pt-32 pb-20 overflow-hidden">
                 <div className="absolute inset-0 opacity-10">
