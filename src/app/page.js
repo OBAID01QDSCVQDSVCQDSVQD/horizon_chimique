@@ -32,11 +32,21 @@ const heroImages = [
   '/chantier.jpg'
 ];
 
+import { useSearchParams } from 'next/navigation';
+
 export default function Home() {
+  const searchParams = useSearchParams();
   const [currentBgIndex, setCurrentBgIndex] = useState(0);
 
   // Support Modal State
   const [supportType, setSupportType] = useState(null);
+
+  useEffect(() => {
+    const type = searchParams.get('support');
+    if (type && ['diagnostic', 'reclamation', 'rdv'].includes(type)) {
+      setSupportType(type);
+    }
+  }, [searchParams]);
   const [supportForm, setSupportForm] = useState({
     message: '',
     date: '',

@@ -132,7 +132,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                <FacebookPixelEvents />
             </Suspense>
             <LocalBusinessSchema />
-            {children}
+            <Suspense fallback={null}>
+              {children}
+            </Suspense>
             <InstallPWA />
             <MobileNavBar />
             <WhatsAppWidget />

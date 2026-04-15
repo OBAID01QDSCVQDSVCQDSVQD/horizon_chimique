@@ -248,6 +248,23 @@ export default async function SolutionDetailPage({ params }) {
                                 dangerouslySetInnerHTML={{ __html: cleanRichText(solution.description) }}
                             ></div>
                         </div>
+                        
+                        {/* Smart CTA : Diagnostic Visite Technique */}
+                        <div className="bg-gradient-to-br from-blue-50 to-white border border-blue-100 rounded-2xl p-6 mb-8 flex flex-col sm:flex-row items-center gap-4 shadow-sm">
+                            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-blue-600 shadow-sm flex-shrink-0">
+                                <LucideIcons.ClipboardList size={24} />
+                            </div>
+                            <div className="flex-1 text-center sm:text-left">
+                                <h3 className="text-lg font-bold text-slate-900 mb-1">Étude technique gratuite ?</h3>
+                                <p className="text-slate-600 text-sm">Demandez un diagnostic sur chantier pour valider cette solution.</p>
+                            </div>
+                            <Link 
+                                href="/?support=diagnostic" 
+                                className="bg-primary text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:shadow-lg transition-all whitespace-nowrap"
+                            >
+                                Demander Diagnostic
+                            </Link>
+                        </div>
 
                         {/* Related Products Section */}
                         {solution.relatedProducts && solution.relatedProducts.length > 0 && (

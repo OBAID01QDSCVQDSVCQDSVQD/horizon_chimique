@@ -37,6 +37,10 @@ const SettingSchema = new mongoose.Schema({
         type: String,
         default: ''
     },
+    catalogExtractedText: {
+        type: String,
+        default: ''
+    },
     fidelity: {
         bronze: { type: Number, default: 1.0 },
         silver: { type: Number, default: 1.2 },
