@@ -85,7 +85,7 @@ export async function GET(req) {
         }
 
         const realizations = await Realization.find(query)
-            .populate('artisan', 'name companyName image fidelityRank points')
+            .populate('artisan', 'name companyName image fidelityRank points slug')
             .sort({ createdAt: -1 })
             .lean();
 

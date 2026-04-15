@@ -1,6 +1,7 @@
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
 import Realization from '@/models/Realization';
+import Review from '@/models/Review';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import WhatsAppButton from '@/components/WhatsAppButton';
@@ -27,6 +28,13 @@ export async function generateMetadata({ params: { id } }) {
         ].filter(Boolean).join(', ');
 
         const base = buildMetadata(title, description, `/artisans/${artisan.slug || id}`, image);
+        // Elevate OpenGraph metadata
+        base.openGraph = {
+            ...base.openGraph,
+            type: 'profile',
+            siteName: 'SDK Batiment',
+            locale: 'fr_TN',
+        };
         return { ...base, keywords };
     } catch {
         return { title: 'Artisan | SDK Batiment' };
@@ -50,6 +58,14 @@ export default async function ArtisanProfile({ params }) {
             return notFound();
         }
         projects = await Realization.find({ artisan: artisan._id, isVisible: true }).sort({ createdAt: -1 });
+
+        const reviews = await Review.find({ artisan: artisan._id, status: 'approved' });
+        const avgRating = reviews.length > 0 
+            ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
+            : '5.0';
+
+        artisan.reviewsCount = reviews.length;
+        artisan.avgRating = avgRating;
     } catch (e) {
         return notFound();
     }
@@ -73,6 +89,14 @@ export default async function ArtisanProfile({ params }) {
             },
         }),
         ...(artisan.specialty && { knowsAbout: artisan.specialty }),
+        ...(artisan.reviewsCount > 0 && {
+            aggregateRating: {
+                '@type': 'AggregateRating',
+                ratingValue: artisan.avgRating,
+                reviewCount: artisan.reviewsCount,
+                bestRating: '5'
+            }
+        })
     };
 
     const breadcrumbJsonLd = {
@@ -80,9 +104,40 @@ export default async function ArtisanProfile({ params }) {
         '@type': 'BreadcrumbList',
         itemListElement: [
             { '@type': 'ListItem', position: 1, name: 'Accueil', item: 'https://sdkbatiment.com' },
-            { '@type': 'ListItem', position: 2, name: 'Artisans' },
-            { '@type': 'ListItem', position: 3, name: artisanName },
+            { '@type': 'ListItem', position: 2, name: 'Artisans', item: 'https://sdkbatiment.com/artisans' },
+            { '@type': 'ListItem', position: 3, name: artisanName, item: `https://sdkbatiment.com/artisans/${artisan.slug || id}` },
         ],
+    };
+
+    const faqJsonLd = {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        "mainEntity": [
+            {
+                "@type": "Question",
+                "name": `Qui est ${artisanName} ?`,
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": artisan.bio?.replace(/<[^>]*>/g, '').slice(0, 300) || `${artisanName} est un artisan partenaire certifié par SDK Batiment, expert en travaux d'étanchéité et bâtiment.`
+                }
+            },
+            ...(artisan.address ? [{
+                "@type": "Question",
+                "name": `Quelle est l'adresse ou la zone d'intervention de ${artisanName} ?`,
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": `${artisanName} est principalement localisé à ${artisan.address} et intervient pour réaliser vos travaux de construction ou rénovation.`
+                }
+            }] : []),
+            {
+                "@type": "Question",
+                "name": `Comment contacter ${artisanName} ?`,
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": `Vous pouvez facilement contacter ${artisanName} via la plateforme SDK Batiment en cliquant sur le bouton de contact sur son profil.`
+                }
+            }
+        ]
     };
 
     return (
@@ -90,6 +145,7 @@ export default async function ArtisanProfile({ params }) {
             {/* JSON-LD for Google */}
             <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
             <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
+            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
             {/* Header / Cover */}
             <div className="h-64 bg-slate-900 relative overflow-hidden">
                 <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20"></div>
@@ -201,7 +257,7 @@ export default async function ArtisanProfile({ params }) {
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {projects.map((project) => (
                                 <Link
-                                    href={`/realisations/${project._id}`}
+                                    href={`/realisations/${project.slug || project._id}`}
                                     key={project._id}
                                     className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-100 flex flex-col"
                                 >

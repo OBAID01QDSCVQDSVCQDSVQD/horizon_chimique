@@ -237,7 +237,7 @@ export default function RealizationsPage() {
                                     >
                                         {/* Image */}
                                         <div className="relative w-full h-56 overflow-hidden bg-slate-100 cursor-pointer shrink-0">
-                                            <Link href={`/realisations/${project._id}`}>
+                                            <Link href={`/realisations/${project.slug || project._id}`}>
                                                 {project.images?.[0] ? (
                                                     <img
                                                         src={project.images[0]}
@@ -266,7 +266,7 @@ export default function RealizationsPage() {
                                             </div>
 
                                             <h3 className="text-lg font-bold text-slate-900 mb-2 line-clamp-1 group-hover:text-primary transition-colors">
-                                                <Link href={`/realisations/${project._id}`}>
+                                                <Link href={`/realisations/${project.slug || project._id}`}>
                                                     {project.title}
                                                 </Link>
                                             </h3>
@@ -277,7 +277,7 @@ export default function RealizationsPage() {
 
                                             {/* Artisan Footer */}
                                             <div className="pt-3 border-t border-slate-50 w-full flex items-center justify-between mt-auto">
-                                                <Link href={`/artisans/${project.artisan._id}`} className="flex items-center gap-2 group/artisan">
+                                                <Link href={`/artisans/${project.artisan.slug || project.artisan._id}`} className="flex items-center gap-2 group/artisan">
                                                     <div className="w-6 h-6 rounded-full bg-slate-200 overflow-hidden border border-slate-100 shrink-0">
                                                         {project.artisan.image ? <img src={project.artisan.image} className="w-full h-full object-cover" /> : <User size={14} className="m-1 text-slate-400" />}
                                                     </div>

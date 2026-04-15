@@ -17,7 +17,7 @@ export async function generateMetadata({ params: { id } }) {
     }
 
     const title = `${product.designation} | SDK Batiment - Produits Bâtiment Tunisie`;
-    const description = product.description_courte || `Découvrez ${product.designation} chez SDK Batiment.`;
+    const description = product.description_courte?.replace(/<[^>]*>/g, '').slice(0, 200) || `${product.designation} au meilleur prix en Tunisie chez SDK Batiment, expert en étanchéité.`;
     const ogImage = product.images && product.images.length > 0
       ? (product.images[0].startsWith('http') ? product.images[0] : `https://sdkbatiment.com${product.images[0]}`)
       : 'https://sdkbatiment.com/logo.png';
@@ -44,7 +44,7 @@ export async function generateMetadata({ params: { id } }) {
       openGraph: {
         title,
         description,
-        type: 'website',
+        type: 'article',
         url: `https://sdkbatiment.com/products/${product.slug || id}`,
         siteName: 'SDK Batiment',
         locale: 'fr_TN',
@@ -90,6 +90,7 @@ export default async function Page({ params: { id } }) {
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: product.designation,
+    url: `https://sdkbatiment.com/products/${product.slug || id}`,
     description: product.description_courte || '',
     image: product.images && product.images.length > 0 ? product.images : [],
     brand: {
@@ -123,7 +124,7 @@ export default async function Page({ params: { id } }) {
     itemListElement: [
       { '@type': 'ListItem', position: 1, name: 'Accueil', item: 'https://sdkbatiment.com' },
       { '@type': 'ListItem', position: 2, name: 'Produits', item: 'https://sdkbatiment.com/products' },
-      { '@type': 'ListItem', position: 3, name: product.designation },
+      { '@type': 'ListItem', position: 3, name: product.designation, item: `https://sdkbatiment.com/products/${product.slug || id}` },
     ],
   } : null;
 
@@ -184,9 +185,9 @@ export default async function Page({ params: { id } }) {
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
       )}
 
-      {/* Hidden SEO Content - visible to Google but not to users (ProductClient handles the UI) */}
+      {/* Hidden SEO Content - visible to Google/screen-readers but not strictly hidden to avoid penalties */}
       {product && (
-        <div style={{ position: 'absolute', left: '-9999px', width: '1px', height: '1px', overflow: 'hidden' }} aria-hidden="true">
+        <div className="sr-only" aria-hidden="true">
           <h1>{product.designation} - SDK Batiment</h1>
           <p>{product.description_courte}</p>
           {product.informations && <p>{product.informations}</p>}
