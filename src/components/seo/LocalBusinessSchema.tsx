@@ -42,6 +42,7 @@ export default function LocalBusinessSchema() {
         { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Étanchéité parking" } },
         { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Isolation thermique" } },
         { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Étanchéité liquide" } },
+        { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Peinture décorative" } },
       ]
     },
     "priceRange": "$$",

@@ -22,10 +22,10 @@ export async function generateMetadata(): Promise<Metadata> {
     metadataBase: new URL(url),
     title: { 
       template: "%s | SDK Batiment", 
-      default: "SDK Batiment - Étanchéité & Imperméabilisation Tunisie" 
+      default: "SDK Batiment - Étanchéité, Imperméabilisation & Peinture Décorative" 
     },
-    description: "SDK Batiment, spécialiste en étanchéité et imperméabilisation à Sousse, Sahel, Tunisie. Toiture, terrasse, sous-sol, piscine.",
-    keywords: ["étanchéité", "imperméabilisation", "Sousse", "Sahel", "Tunisie", "SDK Batiment"],
+    description: "SDK Batiment, spécialiste en étanchéité, imperméabilisation et peinture décorative à Sousse, Sahel, Tunisie. Toiture, terrasse, sous-sol, piscine.",
+    keywords: ["étanchéité", "imperméabilisation", "peinture décorative", "Sousse", "Sahel", "Tunisie", "SDK Batiment"],
     openGraph: { 
       type: "website", 
       locale: "fr_TN", 
@@ -131,7 +131,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <LocalBusinessSchema />
             {children}
             <InstallPWA />
-            <AndroidBanner />
             <MobileNavBar />
             <WhatsAppWidget />
           </LayoutWrapper>
