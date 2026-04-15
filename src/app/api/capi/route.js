@@ -15,6 +15,14 @@ export async function POST(req) {
         const body = await req.json();
         const { eventName, eventId, eventSourceUrl, userData = {}, customData = {} } = body;
 
+        let firstName = userData.firstName;
+        let lastName = userData.lastName;
+        if (!firstName && !lastName && userData.fullName) {
+            const parts = userData.fullName.trim().split(/\s+/);
+            firstName = parts[0];
+            lastName = parts.length > 1 ? parts.slice(1).join(' ') : '';
+        }
+
         console.log(`[CAPI] Received event: ${eventName}, ID: ${eventId}`);
 
         if (!PIXEL_ID || !ACCESS_TOKEN || ACCESS_TOKEN === 'REMPLACE_PAR_TON_TOKEN') {
@@ -31,11 +39,12 @@ export async function POST(req) {
                 action_source: 'website',
                 user_data: {
                     client_ip_address: req.headers.get('x-forwarded-for')?.split(',')[0] || req.headers.get('x-real-ip') || '0.0.0.0',
-                    client_user_agent: req.headers.get('user-agent') || '',
+                    client_user_agent: userData.userAgent || req.headers.get('user-agent') || '',
                     em: userData.email ? hashData(userData.email) : undefined,
                     ph: userData.phone ? hashData(userData.phone.replace(/[^0-9]/g, '').replace(/^0+/, '').replace(/^(?!216)(.*)/, '216$1')) : undefined,
-                    fn: userData.firstName ? hashData(userData.firstName) : undefined,
-                    ln: userData.lastName ? hashData(userData.lastName) : undefined,
+                    fn: firstName ? hashData(firstName) : undefined,
+                    ln: lastName ? hashData(lastName) : undefined,
+                    external_id: userData.external_id ? hashData(userData.external_id) : undefined,
                     fbc: userData.fbc || undefined,
                     fbp: userData.fbp || undefined,
                 },

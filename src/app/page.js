@@ -133,6 +133,9 @@ export default function Home() {
         trackFbEvent('Lead', {
           content_name: supportType === 'diagnostic' ? 'Diagnostic Technique' : supportType === 'reclamation' ? 'Réclamation' : 'Rendez-vous',
           surface: supportForm.surface
+        }, {
+          phone: supportForm.phone,
+          fullName: supportForm.fullName
         });
 
         // Specific sub-event
