@@ -1,6 +1,7 @@
 import dbConnect from '@/lib/db';
 import Solution from '@/models/Solution';
 import Product from '@/models/Product';
+import Realization from '@/models/Realization';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,7 +13,7 @@ export default async function sitemap() {
     // Static pages
     const staticPages = [
         '',
-        '/solutions', // services
+        '/solutions',
         '/about',
         '/contact',
         '/products',
@@ -43,9 +44,22 @@ export default async function sitemap() {
         priority: 0.6,
     }));
 
+    // Dynamic Realisations - HIGH PRIORITY for Google traffic
+    const realisations = await Realization.find(
+        { isVisible: true },
+        { _id: 1, updatedAt: 1, video: 1 }
+    ).lean();
+    const realisationUrls = realisations.map((r) => ({
+        url: `${baseUrl}/realisations/${r._id}`,
+        lastModified: new Date(r.updatedAt),
+        changeFrequency: 'weekly',
+        priority: 0.9,
+    }));
+
     return [
         ...staticPages,
         ...solutionUrls,
         ...productUrls,
+        ...realisationUrls,
     ];
 }

@@ -34,16 +34,34 @@ export async function generateMetadata({ params: { id } }) {
         const ogImage = defaultImage.startsWith('http') ? defaultImage : `https://sdkbatiment.com${defaultImage}`;
         const hasVideo = !!project.video;
 
+        const artisanName = project.artisan?.companyName || project.artisan?.name;
+        const keywords = [
+            project.title,
+            artisanName,
+            ...(project.tags || []),
+            project.location,
+            'SDK Batiment',
+            'étanchéité',
+            'isolation',
+            'travaux bâtiment Tunisie',
+            'réalisation chantier',
+        ].filter(Boolean).join(', ');
+
         // Build base metadata
         const metadata = {
             title,
             description,
+            keywords,
+            alternates: {
+                canonical: `https://sdkbatiment.com/realisations/${id}`,
+            },
             openGraph: {
                 title,
                 description,
                 type: hasVideo ? 'video.other' : 'website',
                 url: `https://sdkbatiment.com/realisations/${id}`,
                 siteName: 'SDK Batiment',
+                locale: 'fr_TN',
                 images: [
                     {
                         url: ogImage,
@@ -80,7 +98,6 @@ export async function generateMetadata({ params: { id } }) {
                     height: 720,
                 }
             ];
-            // Add additional meta tags for better video detection
             metadata.other = {
                 'og:video': project.video,
                 'og:video:secure_url': project.video,
@@ -119,8 +136,73 @@ export default async function PublicRealizationDetail({ params }) {
     const artisanImage = project.artisan?.image;
     const postDate = new Date(project.createdAt).toLocaleDateString("fr-FR", { year: 'numeric', month: 'long', day: 'numeric' });
 
+    // JSON-LD Structured Data for Google Rich Results
+    const jsonLd = {
+        '@context': 'https://schema.org',
+        '@type': 'Article',
+        headline: project.title,
+        description: project.description?.substring(0, 300) || '',
+        image: project.images && project.images.length > 0 ? project.images : [],
+        datePublished: project.createdAt,
+        dateModified: project.updatedAt,
+        author: {
+            '@type': 'Organization',
+            name: artisanName,
+            url: `https://sdkbatiment.com/artisans/${project.artisan._id}`,
+        },
+        publisher: {
+            '@type': 'Organization',
+            name: 'SDK Batiment',
+            url: 'https://sdkbatiment.com',
+            logo: {
+                '@type': 'ImageObject',
+                url: 'https://sdkbatiment.com/logo.png',
+            },
+        },
+        mainEntityOfPage: {
+            '@type': 'WebPage',
+            '@id': `https://sdkbatiment.com/realisations/${id}`,
+        },
+        keywords: (project.tags || []).join(', '),
+        ...(project.location && { contentLocation: { '@type': 'Place', name: project.location } }),
+    };
+
+    // Add VideoObject if project has video
+    const videoJsonLd = project.video ? {
+        '@context': 'https://schema.org',
+        '@type': 'VideoObject',
+        name: project.title,
+        description: project.description?.substring(0, 300) || `Vidéo du chantier ${project.title}`,
+        thumbnailUrl: project.images && project.images[0] ? [project.images[0]] : [],
+        uploadDate: project.createdAt,
+        contentUrl: project.video,
+        embedUrl: project.video,
+        publisher: {
+            '@type': 'Organization',
+            name: 'SDK Batiment',
+        },
+    } : null;
+
+    // Breadcrumb Schema
+    const breadcrumbJsonLd = {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Accueil', item: 'https://sdkbatiment.com' },
+            { '@type': 'ListItem', position: 2, name: 'Réalisations', item: 'https://sdkbatiment.com/realisations' },
+            { '@type': 'ListItem', position: 3, name: project.title },
+        ],
+    };
+
     return (
         <div style={{ minHeight: '100vh', background: '#f0f2f5', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif' }}>
+
+            {/* JSON-LD Structured Data for Google */}
+            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
+            {videoJsonLd && (
+                <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(videoJsonLd) }} />
+            )}
 
             {/* Top Nav Bar - Back button */}
             <div style={{ background: '#fff', borderBottom: '1px solid #e4e6ea', position: 'sticky', top: 0, zIndex: 50, padding: '10px 16px' }}>
@@ -137,14 +219,25 @@ export default async function PublicRealizationDetail({ params }) {
                 </div>
             </div>
 
-            {/* Facebook-style Feed Container */}
-            <div style={{ maxWidth: 680, margin: '16px auto', padding: '0 0 40px 0' }}>
+            {/* Breadcrumbs for SEO */}
+            <nav aria-label="Fil d'Ariane" style={{ maxWidth: 680, margin: '12px auto 0', padding: '0 16px' }}>
+                <ol style={{ display: 'flex', gap: 6, listStyle: 'none', padding: 0, margin: 0, fontSize: 12, color: '#65676b' }}>
+                    <li><Link href="/" style={{ color: '#1877f2', textDecoration: 'none' }}>Accueil</Link></li>
+                    <li>›</li>
+                    <li><Link href="/realisations" style={{ color: '#1877f2', textDecoration: 'none' }}>Réalisations</Link></li>
+                    <li>›</li>
+                    <li style={{ color: '#050505', fontWeight: 500 }}>{project.title}</li>
+                </ol>
+            </nav>
 
-                {/* Post Card */}
-                <div style={{ background: '#fff', borderRadius: 8, boxShadow: '0 1px 2px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
+            {/* Facebook-style Feed Container */}
+            <div style={{ maxWidth: 680, margin: '8px auto', padding: '0 0 40px 0' }}>
+
+                {/* Post Card - Using semantic article tag */}
+                <article itemScope itemType="https://schema.org/Article" style={{ background: '#fff', borderRadius: 8, boxShadow: '0 1px 2px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
 
                     {/* Post Header - Author Info */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px' }}>
+                    <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                             <Link href={`/artisans/${project.artisan._id}`} style={{ textDecoration: 'none', flexShrink: 0 }}>
                                 <div style={{ width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', background: '#e4e6ea', border: '2px solid #e4e6ea' }}>
@@ -156,10 +249,10 @@ export default async function PublicRealizationDetail({ params }) {
                             </Link>
                             <div>
                                 <Link href={`/artisans/${project.artisan._id}`} style={{ textDecoration: 'none' }}>
-                                    <div style={{ fontWeight: 600, fontSize: 15, color: '#050505', lineHeight: 1.2 }}>{artisanName}</div>
+                                    <span itemProp="author" style={{ fontWeight: 600, fontSize: 15, color: '#050505', lineHeight: 1.2 }}>{artisanName}</span>
                                 </Link>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
-                                    <span style={{ fontSize: 12, color: '#65676b' }}>{postDate}</span>
+                                    <time dateTime={project.createdAt} itemProp="datePublished" style={{ fontSize: 12, color: '#65676b' }}>{postDate}</time>
                                     <span style={{ color: '#65676b', fontSize: 10 }}>·</span>
                                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="#65676b"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
                                 </div>
@@ -169,19 +262,26 @@ export default async function PublicRealizationDetail({ params }) {
                             aria-label="Plus d'options">
                             <MoreHorizontal size={20} />
                         </button>
-                    </div>
+                    </header>
 
-                    {/* Post Title + Tags */}
+                    {/* Post Title + Tags - Using semantic h1 */}
                     <div style={{ padding: '0 16px 10px' }}>
-                        <div style={{ fontSize: 15, color: '#050505', lineHeight: 1.4, fontWeight: 500 }}>
-                            <strong>{project.title}</strong>
-                        </div>
+                        <h1 itemProp="headline" style={{ fontSize: 15, color: '#050505', lineHeight: 1.4, fontWeight: 700, margin: 0 }}>
+                            {project.title}
+                        </h1>
+                        {project.location && (
+                            <div style={{ fontSize: 12, color: '#65676b', marginTop: 4 }}>
+                                📍 {project.location}
+                            </div>
+                        )}
                         {project.tags && project.tags.length > 0 && (
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 6 }}>
                                 {project.tags.map(tag => (
-                                    <span key={tag} style={{ background: '#e7f3ff', color: '#1877f2', borderRadius: 4, fontSize: 12, fontWeight: 700, padding: '2px 8px', textTransform: 'uppercase' }}>
-                                        {tag}
-                                    </span>
+                                    <Link key={tag} href={`/realisations?tag=${encodeURIComponent(tag)}`} style={{ textDecoration: 'none' }}>
+                                        <span style={{ background: '#e7f3ff', color: '#1877f2', borderRadius: 4, fontSize: 12, fontWeight: 700, padding: '2px 8px', textTransform: 'uppercase' }}>
+                                            {tag}
+                                        </span>
+                                    </Link>
                                 ))}
                             </div>
                         )}
@@ -189,7 +289,7 @@ export default async function PublicRealizationDetail({ params }) {
 
                     {/* Post Text Content */}
                     {project.description && (
-                        <div style={{ padding: '0 16px 12px', fontSize: 14, color: '#333', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
+                        <div itemProp="articleBody" style={{ padding: '0 16px 12px', fontSize: 14, color: '#333', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
                             {project.description}
                         </div>
                     )}
@@ -207,18 +307,15 @@ export default async function PublicRealizationDetail({ params }) {
                         </div>
                     )}
 
-                    {/* Interaction Bar - Like / Comment / Share */}
+                    {/* Interaction Bar */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', borderBottom: '1px solid #e4e6ea' }}>
-                        {/* Like Button */}
                         <div style={{ display: 'flex', justifyContent: 'center', padding: '4px 0' }}>
                             <LikeButton realizationId={project._id.toString()} initialLikes={likesCount} initialIsLiked={isLiked} facebookStyle={true} />
                         </div>
-                        {/* Comment */}
                         <button style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', padding: '8px 0', fontWeight: 600, fontSize: 13, color: '#65676b', borderRadius: 4 }}>
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
                             <span style={{ fontSize: 12 }}>Commenter</span>
                         </button>
-                        {/* WhatsApp Contact */}
                         <a
                             href={formatWhatsAppUrl(project.artisan.whatsapp || project.artisan.phone)}
                             target="_blank"
@@ -228,7 +325,6 @@ export default async function PublicRealizationDetail({ params }) {
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zm-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884zm8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
                             <span style={{ fontSize: 12 }}>Contacter</span>
                         </a>
-                        {/* Copy Link Button */}
                         <ShareButton url={`https://sdkbatiment.com/realisations/${project._id}`} />
                     </div>
 
@@ -236,9 +332,9 @@ export default async function PublicRealizationDetail({ params }) {
                     <div style={{ padding: '0 0 8px 0' }}>
                         <CommentSection realizationId={project._id.toString()} facebookStyle={true} />
                     </div>
-                </div>
+                </article>
 
-                {/* Rating Card - Below Post */}
+                {/* Rating Card */}
                 <div style={{ marginTop: 12, background: '#fff', borderRadius: 8, boxShadow: '0 1px 2px rgba(0,0,0,0.1)', padding: '16px' }}>
                     <ReviewSection artisanId={project.artisan._id.toString()} showList={false} title="Noter l'Artisan sur ce projet" />
                 </div>
