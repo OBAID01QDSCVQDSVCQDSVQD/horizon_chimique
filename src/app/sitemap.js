@@ -38,11 +38,11 @@ export default async function sitemap() {
     }));
 
     // Dynamic Products
-    const products = await Product.find({}, { _id: 1, updatedAt: 1 }).lean();
+    const products = await Product.find({}, { _id: 1, updatedAt: 1, slug: 1 }).lean();
     const productUrls = products.map((p) => ({
-        url: `${baseUrl}/products/${p._id}`,
+        url: `${baseUrl}/products/${p.slug || p._id}`,
         lastModified: new Date(p.updatedAt),
-        changeFrequency: 'weekly',
+        changeFrequency: 'monthly',
         priority: 0.6,
     }));
 

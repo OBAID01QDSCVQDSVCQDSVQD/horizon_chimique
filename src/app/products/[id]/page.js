@@ -5,7 +5,9 @@ import ProductClient from './ProductClient';
 export async function generateMetadata({ params: { id } }) {
   try {
     await dbConnect();
-    const product = await Product.findOne({ _id: id }).lean();
+    const isObjectId = /^[0-9a-fA-F]{24}$/.test(id);
+    const query = isObjectId ? { _id: id } : { slug: id };
+    const product = await Product.findOne(query).lean();
 
     if (!product) {
       return {
@@ -37,13 +39,13 @@ export async function generateMetadata({ params: { id } }) {
       description,
       keywords,
       alternates: {
-        canonical: `https://sdkbatiment.com/products/${id}`,
+        canonical: `https://sdkbatiment.com/products/${product.slug || id}`,
       },
       openGraph: {
         title,
         description,
         type: 'website',
-        url: `https://sdkbatiment.com/products/${id}`,
+        url: `https://sdkbatiment.com/products/${product.slug || id}`,
         siteName: 'SDK Batiment',
         locale: 'fr_TN',
         images: [
@@ -76,7 +78,9 @@ export default async function Page({ params: { id } }) {
 
   let product = null;
   try {
-    product = await Product.findOne({ _id: id }).lean();
+    const isObjectId = /^[0-9a-fA-F]{24}$/.test(id);
+    const query = isObjectId ? { _id: id } : { slug: id };
+    product = await Product.findOne(query).lean();
   } catch (e) {
     // Product not found
   }

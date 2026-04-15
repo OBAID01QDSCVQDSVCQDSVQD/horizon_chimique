@@ -48,6 +48,30 @@ const ProductSchema = new mongoose.Schema({
     images: [String],
     pdf_url: String,
     facebookPixelId: { type: String, default: '' }, // Pixel ID spécifique au produit
+    slug: {
+        type: String,
+        unique: true,
+        sparse: true,
+        index: true
+    }
 }, { timestamps: true });
+
+// Auto-generate slug before saving
+ProductSchema.pre('save', function(next) {
+    if (!this.slug && this.designation) {
+        this.slug = this.designation
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, "") // Remove accents
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric with -
+            .replace(/^-+|-+$/g, ''); // Trim -
+            
+        // Append part of ID to ensure absolute uniqueness
+        if (this.isNew || !this.slug) {
+             const shortId = this._id.toString().slice(-4);
+             this.slug = `${this.slug}-${shortId}`;
+        }
+    }
+    next();
+});
 
 export default mongoose.models.Product || mongoose.model('Product', ProductSchema);
