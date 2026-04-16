@@ -35,12 +35,17 @@ export default function RegisterPage() {
             return;
         }
 
+        if (!turnstileToken) {
+            toast.error("Veuillez compléter la vérification Anti-Bot (Captcha) avant l'envoi");
+            return;
+        }
+
         setSubmitting(true);
         try {
             const res = await fetch('/api/auth/otp/send', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ phone: phone })
+                body: JSON.stringify({ phone: phone, turnstileToken })
             });
             const data = await res.json();
 
@@ -295,15 +300,13 @@ export default function RegisterPage() {
                         )}
 
                         {/* Turnstile Protection */}
-                        {(role === 'artisan' || (role === 'client' && showOtpInput)) && (
-                            <div className="flex justify-center py-2">
-                                <Turnstile
-                                    siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || process.env.NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY}
-                                    onSuccess={(token) => setTurnstileToken(token)}
-                                    options={{ theme: 'light' }}
-                                />
-                            </div>
-                        )}
+                        <div className="flex justify-center py-2">
+                            <Turnstile
+                                siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || process.env.NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY}
+                                onSuccess={(token) => setTurnstileToken(token)}
+                                options={{ theme: 'light' }}
+                            />
+                        </div>
 
                         <button
                             type="submit"

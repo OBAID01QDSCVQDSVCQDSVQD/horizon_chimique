@@ -13,7 +13,7 @@ function normalizePhone(p) {
     return digits;
 }
 
-const verifyTurnstile = async (token) => {
+export const verifyTurnstile = async (token) => {
     const secretKey = process.env.TURNSTILE_SECRET_KEY || process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY;
     if (!secretKey) return true; // Skip if no secret key configured
 

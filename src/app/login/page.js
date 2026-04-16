@@ -27,12 +27,18 @@ export default function LoginPage() {
             toast.error("Numéro de téléphone invalide (8 chiffres requis)");
             return;
         }
+
+        if (!turnstileToken) {
+            toast.error("Veuillez compléter la vérification Anti-Bot (Captcha) avant l'envoi");
+            return;
+        }
+
         setSubmitting(true);
         try {
             const res = await fetch('/api/auth/otp/send', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ phone: identifier })
+                body: JSON.stringify({ phone: identifier, turnstileToken })
             });
             const data = await res.json();
             if (res.ok) {
@@ -286,7 +292,7 @@ export default function LoginPage() {
                                                 <button type="button" onClick={() => setShowOtpInput(false)} className="text-xs text-primary font-bold mt-4 block mx-auto underline">Modifier le numéro</button>
                                             </div>
 
-                                            {/* SMS Turnstile (بعد إدخال OTP) */}
+                                            {/* SMS/Global Turnstile */}
                                             <div className="flex justify-center py-2">
                                                 <Turnstile
                                                     siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || process.env.NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY}

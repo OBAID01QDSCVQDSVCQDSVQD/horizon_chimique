@@ -16,8 +16,15 @@ export async function POST(req) {
     const { success: hrOk } = await rateLimit(`otp_hr_${ip}`, 10, 3600);
     if (!hrOk) return NextResponse.json({ error: 'Limite horaire atteinte pour les SMS.' }, { status: 429 });
 
-    const { phone: rawPhone } = await req.json();
+    const { phone: rawPhone, turnstileToken } = await req.json();
     if (!rawPhone) return NextResponse.json({ error: 'Numéro de téléphone requis' }, { status: 400 });
+
+    // Verify Turnstile (Human Check) before sending SMS
+    const { verifyTurnstile } = await import('@/lib/auth');
+    const isHuman = await verifyTurnstile(turnstileToken);
+    if (!isHuman) {
+      return NextResponse.json({ error: 'Échec de la vérification Anti-Bot (Captcha). Veuillez réessayer.' }, { status: 403 });
+    }
 
     // Normalize phone for consistency (216XXXXXXXX)
     const phone = rawPhone.replace(/\D/g, '').length === 8 && /^[2459]/.test(rawPhone.replace(/\D/g, '')) 
