@@ -1,8 +1,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { Loader2, AlertCircle, BookOpen } from 'lucide-react';
-import PDFViewer from '@/components/PDFViewer';
+
+const PDFViewer = dynamic(() => import('@/components/PDFViewer'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 text-slate-500">
+      <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
+      <p className="text-sm font-medium">Chargement du lecteur (page par page)…</p>
+    </div>
+  ),
+});
 
 export default function CatalogClient({ initialCatalogUrl }) {
   const [catalogUrl, setCatalogUrl] = useState(initialCatalogUrl);
