@@ -4,6 +4,9 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { ChevronLeft, ChevronRight, ExternalLink, Loader2 } from 'lucide-react';
 
+// AVANT le premier rendu de <Document> — sinon pdf.js tente le worker CDN (unpkg .mjs qui échoue)
+pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+
 function resolvePdfSrc(url) {
   if (!url) return null;
   if (url.startsWith('http://') || url.startsWith('https://')) {
@@ -22,10 +25,6 @@ export default function PDFViewer({ url }) {
   const touchStartX = useRef(null);
 
   const pdfSrc = resolvePdfSrc(url);
-
-  useEffect(() => {
-    pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
-  }, []);
 
   useEffect(() => {
     const update = () => {
