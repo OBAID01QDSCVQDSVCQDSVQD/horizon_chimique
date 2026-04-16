@@ -124,6 +124,34 @@ export const authOptions = {
 
                     await dbConnect();
 
+                    // Special Case: Super Admin from Environment Variables
+                    if (identifier && identifier.toLowerCase() === (process.env.SUPER_ADMIN_EMAIL || "admin@admin.com").toLowerCase() 
+                        && password === (process.env.SUPER_ADMIN_PASSWORD || "admin123")) {
+                        
+                        // Sync/Create this user in DB if needed (optional but good for tracking)
+                        let adminUser = await User.findOne({ email: identifier.toLowerCase() });
+                        if (!adminUser) {
+                            const hashedPassword = await bcrypt.hash(password, 10);
+                            adminUser = await User.create({
+                                name: "Super Admin",
+                                email: identifier.toLowerCase(),
+                                password: hashedPassword,
+                                role: 'admin',
+                                isVerified: true,
+                                status: 'approved'
+                            });
+                        }
+                        
+                        return {
+                            id: adminUser._id.toString(),
+                            name: adminUser.name,
+                            email: adminUser.email,
+                            role: adminUser.role,
+                            phone: adminUser.phone,
+                            isVerified: adminUser.isVerified
+                        };
+                    }
+
                     const user = await User.findOne({
                         $or: [
                             { email: identifier.toLowerCase() },
