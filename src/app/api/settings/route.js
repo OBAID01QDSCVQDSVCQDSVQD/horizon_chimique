@@ -5,14 +5,20 @@ import Setting from '@/models/Setting';
 export async function GET() {
     try {
         await dbConnect();
-        // Fetch the existing setting or create default if not exists
-        let setting = await Setting.findOne();
+        
+        // Always try to find the FIRST settings document
+        let setting = await Setting.findOne({}).lean();
+        
         if (!setting) {
-            setting = await Setting.create({});
+            // Create a default one if none exists
+            const newSetting = await Setting.create({});
+            setting = newSetting.toObject();
         }
+
         return NextResponse.json({ success: true, data: setting });
     } catch (error) {
-        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+        console.error('Settings GET error:', error);
+        return NextResponse.json({ success: false, error: "Impossible de charger les paramètres" }, { status: 500 });
     }
 }
 
@@ -21,30 +27,39 @@ export async function PUT(request) {
         await dbConnect();
         const body = await request.json();
 
-        // 🛡️ SECURITY & STABILITY: Carefully select fields to update
-        // This prevents Mongoose from trying to overwrite immutable or internal fields
+        // 1. Find the target document
+        let setting = await Setting.findOne({});
+        
+        if (!setting) {
+            setting = new Setting({});
+        }
+
+        // 2. Safely extract updateable fields
         const { _id, __v, createdAt, updatedAt, ...updateData } = body;
 
-        // Perform the update
-        // We use $set to only update the fields provided, preserving others
-        const setting = await Setting.findOneAndUpdate(
-            {},
-            { $set: updateData },
-            { 
-                new: true, 
-                upsert: true, 
-                runValidators: false, // Turn off validators to avoid strict schema match issues during transition
-                setDefaultsOnInsert: true 
+        // 3. Apply updates manually to ensure nested objects are handled correctly
+        Object.keys(updateData).forEach(key => {
+            if (updateData[key] !== undefined) {
+                setting[key] = updateData[key];
             }
-        );
+        });
 
-        console.log('✅ Settings updated successfully');
-        return NextResponse.json({ success: true, data: setting });
+        // 4. Save with versioning check
+        const savedSetting = await setting.save();
+
+        console.log('✅ Settings saved successfully via manual save');
+        return NextResponse.json({ success: true, data: savedSetting });
     } catch (error) {
-        console.error('❌ Settings PUT error:', error);
+        console.error('❌ CRITICAL Settings Save Error:', error);
+        
+        // If it's a validation error, provide more detail
+        const errorMessage = error.name === 'ValidationError' 
+            ? Object.values(error.errors).map(err => err.message).join(', ')
+            : (error.message || "Erreur inconnue lors de la sauvegarde");
+
         return NextResponse.json({ 
             success: false, 
-            error: error.message || "Erreur interne du serveur lors de la sauvegarde" 
+            error: errorMessage 
         }, { status: 400 });
     }
 }
