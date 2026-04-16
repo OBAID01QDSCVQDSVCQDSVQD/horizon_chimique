@@ -62,13 +62,26 @@
         function showError(msg) {
             document.getElementById('loader').classList.add('hidden');
             const errDiv = document.getElementById('error-msg');
-            errDiv.innerHTML = `<strong>Impossible d'afficher le PDF</strong><br><small>${msg}</small><br><br><a href="${urlParams.get('file')}" download target="_blank" style="background:#2563eb; color:white; padding:10px 20px; text-decoration:none; border-radius:6px; display:inline-block; font-weight:bold;">📥 Télécharger le fichier</a>`;
+            const originalUrl = urlParams.get('file');
+            errDiv.innerHTML = `
+                <div style="padding: 20px;">
+                    <strong style="color: #b91c1c; font-size: 18px;">Impossible d'afficher le visualiseur</strong><br>
+                    <p style="color: #6d6d6d; margin: 10px 0;">Le fichier est trop volumineux (45Mo) pour l'aperçu dynamique sur ce navigateur.</p>
+                    <a href="${originalUrl}" target="_blank" style="background:#2563eb; color:white; padding:12px 24px; text-decoration:none; border-radius:12px; display:inline-block; font-weight:bold; margin-top:10px; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);">🚀 Ouvrir le catalogue maintenant</a>
+                </div>
+            `;
             errDiv.classList.remove('hidden');
         }
 
         if (!url) showError("Aucun fichier spécifié");
         else {
-            const loadingTask = pdfjsLib.getDocument(url);
+            // Robust loading: avoid Range Errors for large files if connection is unstable
+            const loadingTask = pdfjsLib.getDocument({
+                url: url,
+                disableRange: false, // Keep it for speed, but catch error
+                disableAutoFetch: true,
+                disableStream: false
+            });
             
             loadingTask.promise.then(doc => {
                 pdfDoc = doc;
@@ -78,8 +91,19 @@
                 document.getElementById('controls').classList.remove('hidden');
                 renderPage(pageNum);
             }).catch(error => {
-                console.error(error);
-                showError(error.message);
+                console.warn("Retry without range requests...");
+                // Fallback: Try again without range requests
+                pdfjsLib.getDocument({ url: url, disableRange: true }).promise.then(doc => {
+                    pdfDoc = doc;
+                    document.getElementById('page-info').textContent = `${pageNum} / ${pdfDoc.numPages}`;
+                    document.getElementById('loader').classList.add('hidden');
+                    document.getElementById('canvas-wrapper').classList.remove('hidden');
+                    document.getElementById('controls').classList.remove('hidden');
+                    renderPage(pageNum);
+                }).catch(err => {
+                    console.error(err);
+                    showError(err.message);
+                });
             });
         }
 

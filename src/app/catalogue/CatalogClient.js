@@ -36,32 +36,50 @@ export default function CatalogClient({ initialCatalogUrl }) {
 
   return (
     <div className="flex-grow bg-gradient-to-b from-slate-50/80 to-white relative flex flex-col p-4 md:p-6">
+      {/* Header with quick actions */}
+      <div className="max-w-7xl mx-auto w-full mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-100 animate-in slide-in-from-top-4 duration-500">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-black text-slate-800">Catalogue Général 2026</h1>
+          <p className="text-slate-500 text-sm mt-1">L'excellence technique pour vos projets d'étanchéité.</p>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <a 
+            href={catalogUrl} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-xl font-bold transition-all shadow-lg shadow-blue-200 active:scale-95"
+          >
+            <BookOpen size={20} />
+            Affichage Instantané
+          </a>
+          <a 
+            href={catalogUrl} 
+            download="Catalogue-SDK-Batiment.pdf"
+            className="flex items-center gap-2 bg-slate-800 hover:bg-slate-900 text-white px-5 py-3 rounded-xl font-bold transition-all active:scale-95"
+          >
+            Télécharger le PDF
+          </a>
+        </div>
+      </div>
+
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="relative mb-6">
-            <div className="w-20 h-24 rounded-lg bg-white shadow-lg border border-slate-200 flex items-center justify-center">
-              <BookOpen className="w-10 h-10 text-blue-500 animate-pulse" />
-            </div>
-            <Loader2 className="w-8 h-8 text-blue-600 animate-spin absolute -bottom-2 -right-2 bg-white rounded-full p-1 shadow" />
-          </div>
-          <p className="text-slate-700 font-semibold">Chargement des informations du catalogue…</p>
-          <p className="text-slate-400 text-sm mt-2 max-w-sm">
-            Récupération du lien depuis le serveur
-          </p>
+          <Loader2 className="w-12 h-12 text-blue-600 animate-spin mb-4" />
+          <p className="text-slate-700 font-bold">Initialisation du visualiseur...</p>
         </div>
       ) : catalogUrl ? (
-        <div className="w-full animate-in fade-in duration-500">
-          <PDFViewer url={catalogUrl} />
+        <div className="w-full">
+            <div className="mb-4 flex items-center gap-2 text-slate-400 text-xs font-semibold uppercase tracking-wider">
+                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                Lecture interactive disponbile
+            </div>
+            <PDFViewer url={catalogUrl} />
         </div>
       ) : (
         <div className="text-center max-w-md mx-auto bg-white p-10 rounded-2xl shadow-sm border border-slate-100 my-12">
-          <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
-            <AlertCircle size={32} />
-          </div>
-          <h3 className="text-lg font-bold text-slate-900 mb-2">Catalogue non disponible</h3>
-          <p className="text-slate-500 text-sm">
-            Le lien du catalogue n’est pas encore configuré. Contactez le support technique.
-          </p>
+          <AlertCircle size={48} className="text-slate-300 mx-auto mb-4" />
+          <h3 className="text-lg font-bold text-slate-900 mb-2">Catalogue non configuré</h3>
+          <p className="text-slate-500 text-sm">Le fichier est en cours de mise à jour.</p>
         </div>
       )}
     </div>
