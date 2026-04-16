@@ -69,11 +69,6 @@ export default function RegisterPage() {
             return;
         }
 
-        if (!turnstileToken) {
-            toast.error("Veuillez compléter la vérification Anti-Bot (Captcha)");
-            return;
-        }
-
         setSubmitting(true);
         try {
             const res = await fetch('/api/register', {
