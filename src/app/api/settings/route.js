@@ -21,17 +21,30 @@ export async function PUT(request) {
         await dbConnect();
         const body = await request.json();
 
-        // Strip Mongoose internal fields to avoid immutable field errors
+        // 🛡️ SECURITY & STABILITY: Carefully select fields to update
+        // This prevents Mongoose from trying to overwrite immutable or internal fields
         const { _id, __v, createdAt, updatedAt, ...updateData } = body;
 
+        // Perform the update
+        // We use $set to only update the fields provided, preserving others
         const setting = await Setting.findOneAndUpdate(
             {},
             { $set: updateData },
-            { new: true, upsert: true, runValidators: false }
+            { 
+                new: true, 
+                upsert: true, 
+                runValidators: false, // Turn off validators to avoid strict schema match issues during transition
+                setDefaultsOnInsert: true 
+            }
         );
+
+        console.log('✅ Settings updated successfully');
         return NextResponse.json({ success: true, data: setting });
     } catch (error) {
-        console.error('Settings PUT error:', error);
-        return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+        console.error('❌ Settings PUT error:', error);
+        return NextResponse.json({ 
+            success: false, 
+            error: error.message || "Erreur interne du serveur lors de la sauvegarde" 
+        }, { status: 400 });
     }
 }
