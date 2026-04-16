@@ -335,49 +335,77 @@ export default async function PublicRealizationDetail({ params }) {
                         )}
                     </div>
 
-                    {/* Post Text Content */}
-                    {project.description && (
-                        <div itemProp="articleBody" style={{ padding: '0 16px 12px', fontSize: 14, color: '#333', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
-                            {project.description}
-                        </div>
-                    )}
+                    {/* Post Text Content with Smart CTA Injection */}
+                    {project.description && (() => {
+                        const description = project.description;
+                        const paragraphs = description.split('\n');
+                        const isLong = description.length > 500 && paragraphs.length > 3;
 
-                    {/* Smart CTA : Diagnostic Visite Technique Responsive */}
-                    <div style={{ 
-                        margin: '0 16px 16px', 
-                        padding: '16px', 
-                        borderRadius: 12, 
-                        background: 'linear-gradient(135deg, #f0f7ff 0%, #ffffff 100%)', 
-                        border: '1px solid #e7f3ff', 
-                        display: 'flex', 
-                        flexWrap: 'wrap',
-                        alignItems: 'center', 
-                        gap: 12, 
-                        boxShadow: '0 2px 8px rgba(24,119,242,0.05)' 
-                    }}>
-                        <div style={{ background: '#e7f3ff', padding: 10, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <ClipboardList className="text-blue-600" size={20} />
-                        </div>
-                        <div style={{ flex: '1 1 200px' }}>
-                            <div style={{ fontSize: 14, fontWeight: 700, color: '#050505', marginBottom: 2 }}>Besoin d'un diagnostic ?</div>
-                            <div style={{ fontSize: 12, color: '#65676b' }}>Demandez une visite technique gratuite pour votre projet.</div>
-                        </div>
-                        <Link href="/?support=diagnostic" style={{ 
-                            background: '#1877f2', 
-                            color: '#fff', 
-                            padding: '10px 18px', 
-                            borderRadius: 8, 
-                            fontSize: 13, 
-                            fontWeight: 600, 
-                            textDecoration: 'none', 
-                            textAlign: 'center',
-                            flex: '1 1 auto',
-                            minWidth: 'fit-content',
-                            boxShadow: '0 2px 4px rgba(24,119,242,0.2)' 
-                        }}>
-                            Commencer
-                        </Link>
-                    </div>
+                        // Reusable CTA Component
+                        const DiagnosticCTA = ({ isMiddle = false }) => (
+                            <div style={{ 
+                                margin: isMiddle ? '16px 0' : '0 16px 16px', 
+                                padding: '16px', 
+                                borderRadius: 12, 
+                                background: 'linear-gradient(135deg, #f0f7ff 0%, #ffffff 100%)', 
+                                border: '1px solid #e7f3ff', 
+                                display: 'flex', 
+                                flexWrap: 'wrap',
+                                alignItems: 'center', 
+                                gap: 12, 
+                                boxShadow: '0 2px 8px rgba(24,119,242,0.05)' 
+                            }}>
+                                <div style={{ background: '#e7f3ff', padding: 10, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <ClipboardList className="text-blue-600" size={20} />
+                                </div>
+                                <div style={{ flex: '1 1 200px' }}>
+                                    <div style={{ fontSize: 14, fontWeight: 700, color: '#050505', marginBottom: 2 }}>Besoin d'un diagnostic ?</div>
+                                    <div style={{ fontSize: 12, color: '#65676b' }}>Demandez une visite technique gratuite pour votre projet.</div>
+                                </div>
+                                <Link href="/?support=diagnostic" style={{ 
+                                    background: '#1877f2', 
+                                    color: '#fff', 
+                                    padding: '10px 18px', 
+                                    borderRadius: 8, 
+                                    fontSize: 13, 
+                                    fontWeight: 600, 
+                                    textDecoration: 'none', 
+                                    textAlign: 'center',
+                                    flex: '1 1 auto',
+                                    minWidth: 'fit-content',
+                                    boxShadow: '0 2px 4px rgba(24,119,242,0.2)' 
+                                }}>
+                                    Demander Diagnostic
+                                </Link>
+                            </div>
+                        );
+
+                        if (isLong) {
+                            const middleIndex = Math.floor(paragraphs.length / 2);
+                            const topHalf = paragraphs.slice(0, middleIndex).join('\n');
+                            const bottomHalf = paragraphs.slice(middleIndex).join('\n');
+
+                            return (
+                                <>
+                                    <div itemProp="articleBody" style={{ padding: '0 16px 12px', fontSize: 14, color: '#333', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
+                                        {topHalf}
+                                        <DiagnosticCTA isMiddle={true} />
+                                        {bottomHalf}
+                                    </div>
+                                    <DiagnosticCTA />
+                                </>
+                            );
+                        }
+
+                        return (
+                            <>
+                                <div itemProp="articleBody" style={{ padding: '0 16px 12px', fontSize: 14, color: '#333', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
+                                    {description}
+                                </div>
+                                <DiagnosticCTA />
+                            </>
+                        );
+                    })()}
 
                     {/* Facebook-Style Image Grid */}
                     <ProjectGalleryFB images={project.images} video={project.video} />
