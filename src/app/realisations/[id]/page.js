@@ -1,122 +1,28 @@
 import dbConnect from '@/lib/db';
 import Realization from '@/models/Realization';
 import { notFound } from 'next/navigation';
-import Link from 'next/link';
-import { ArrowLeft, UserCircle, MoreHorizontal, ClipboardList } from 'lucide-react';
-import ProjectGalleryFB from '@/components/ProjectGalleryFB';
-import WhatsAppButton from '@/components/WhatsAppButton';
-import ShareButton from '@/components/ShareButton';
-
-const formatWhatsAppUrl = (phone) => {
-    if (!phone) return null;
-    const clean = phone.replace(/[^0-9]/g, '');
-    if (clean.startsWith('216')) {
-        return `https://wa.me/${clean}`;
-    }
-    return `https://wa.me/216${clean}`;
-};
-
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import LikeButton from "@/components/LikeButton";
-import CommentSection from "@/components/CommentSection";
-import ReviewSection from "@/components/ReviewSection";
+import RealizationClient from './RealizationClient';
 
 export async function generateMetadata({ params: { id } }) {
     await dbConnect();
     try {
         const isObjectId = /^[0-9a-fA-F]{24}$/.test(id);
         const query = isObjectId ? { _id: id } : { slug: id };
-
         const project = await Realization.findOne(query).populate('artisan', 'companyName name').lean();
         if (!project || !project.isVisible) return { title: 'Projet Introuvable | SDK Batiment' };
 
-        const title = `${project.title} - par ${project.artisan?.companyName || project.artisan?.name} | SDK Batiment`;
-        const description = project.description?.substring(0, 160) || "Découvrez nos réalisations chez SDK Batiment.";
-        const defaultImage = project.images && project.images.length > 0 ? project.images[0] : '/logo.png';
-        const ogImage = defaultImage.startsWith('http') ? defaultImage : `https://sdkbatiment.com${defaultImage}`;
-        const hasVideo = !!project.video;
-
-        const artisanName = project.artisan?.companyName || project.artisan?.name;
-        const keywords = [
-            project.title,
-            artisanName,
-            ...(project.tags || []),
-            project.location,
-            'SDK Batiment',
-            'étanchéité',
-            'isolation',
-            'travaux bâtiment Tunisie',
-            'réalisation chantier',
-        ].filter(Boolean).join(', ');
-
-        // Build base metadata
-        const metadata = {
-            title,
-            description,
-            keywords,
-            alternates: {
-                canonical: `https://sdkbatiment.com/realisations/${project.slug || id}`,
-            },
+        return {
+            title: `${project.title} - par ${project.artisan?.companyName || project.artisan?.name} | SDK Batiment`,
+            description: project.description?.substring(0, 160) || "Découvrez nos réalisations chez SDK Batiment.",
             openGraph: {
-                title,
-                description,
-                type: hasVideo ? 'video.other' : 'article',
-                url: `https://sdkbatiment.com/realisations/${project.slug || id}`,
-                siteName: 'SDK Batiment',
-                locale: 'fr_TN',
-                images: [
-                    {
-                        url: ogImage,
-                        width: 1200,
-                        height: 630,
-                        alt: project.title,
-                    },
-                ],
-            },
-            twitter: {
-                card: hasVideo ? 'player' : 'summary_large_image',
-                title,
-                description,
-                images: [ogImage],
-            },
+                images: [{ url: project.images?.[0] || '/logo.png' }],
+            }
         };
-
-        // Add video-specific OG tags if project has video
-        if (hasVideo) {
-            metadata.openGraph.videos = [
-                {
-                    url: project.video,
-                    secureUrl: project.video,
-                    type: 'video/mp4',
-                    width: 1280,
-                    height: 720,
-                }
-            ];
-            metadata.twitter.players = [
-                {
-                    playerUrl: project.video,
-                    streamUrl: project.video,
-                    width: 1280,
-                    height: 720,
-                }
-            ];
-            metadata.other = {
-                'og:video': project.video,
-                'og:video:secure_url': project.video,
-                'og:video:type': 'video/mp4',
-                'og:video:width': '1280',
-                'og:video:height': '720',
-            };
-        }
-
-        return metadata;
-    } catch {
-        return { title: 'Projet | SDK Batiment' };
-    }
+    } catch { return { title: 'Projet | SDK Batiment' }; }
 }
 
-// Server Component for SEO
 export default async function PublicRealizationDetail({ params }) {
     const { id } = params;
     await dbConnect();
@@ -128,7 +34,7 @@ export default async function PublicRealizationDetail({ params }) {
         const isObjectId = /^[0-9a-fA-F]{24}$/.test(id);
         const query = isObjectId ? { _id: id } : { slug: id };
 
-        project = await Realization.findOne(query).populate('artisan', 'name companyName image phone email whatsapp');
+        project = await Realization.findOne(query).populate('artisan', 'name companyName image phone email whatsapp fidelityRank points');
         if (!project || !project.isVisible) return notFound();
     } catch (e) {
         return notFound();
@@ -138,329 +44,29 @@ export default async function PublicRealizationDetail({ params }) {
     const likesCount = hasLikesArray ? project.likes.length : 0;
     const isLiked = userId && hasLikesArray ? project.likes.some(like => like.toString() === userId) : false;
 
-    const artisanName = project.artisan?.companyName || project.artisan?.name;
-    const artisanImage = project.artisan?.image;
-    const postDate = new Date(project.createdAt).toLocaleDateString("fr-FR", { year: 'numeric', month: 'long', day: 'numeric' });
-
-    // JSON-LD Structured Data for Google Rich Results
+    // JSON-LD Structured Data
     const jsonLd = {
         '@context': 'https://schema.org',
         '@type': 'Article',
         headline: project.title,
-        description: project.description?.substring(0, 300) || '',
-        image: project.images && project.images.length > 0 ? project.images : [],
+        description: project.description,
+        image: project.images,
         datePublished: project.createdAt,
-        dateModified: project.updatedAt,
         author: {
             '@type': 'Organization',
-            name: artisanName,
-            url: `https://sdkbatiment.com/artisans/${project.artisan.slug || project.artisan._id}`,
-        },
-        publisher: {
-            '@type': 'Organization',
-            name: 'SDK Batiment',
-            url: 'https://sdkbatiment.com',
-            logo: {
-                '@type': 'ImageObject',
-                url: 'https://sdkbatiment.com/logo.png',
-            },
-        },
-        ...(project.location && {
-            contentLocation: {
-                '@type': 'Place',
-                name: project.location
-            }
-        }),
-        ...(project.tags && project.tags.length > 0 && {
-            keywords: project.tags.join(', ')
-        }),
-        mainEntityOfPage: {
-            '@type': 'WebPage',
-            '@id': `https://sdkbatiment.com/realisations/${project.slug || id}`,
-        },
-        keywords: (project.tags || []).join(', '),
-        ...(project.location && { contentLocation: { '@type': 'Place', name: project.location } }),
-    };
-
-    // Add VideoObject if project has video
-    const videoJsonLd = project.video ? {
-        '@context': 'https://schema.org',
-        '@type': 'VideoObject',
-        name: project.title,
-        description: project.description?.substring(0, 300) || `Vidéo du chantier ${project.title}`,
-        thumbnailUrl: project.images && project.images[0] ? [project.images[0]] : [],
-        uploadDate: project.createdAt,
-        contentUrl: project.video,
-        embedUrl: project.video,
-        publisher: {
-            '@type': 'Organization',
-            name: 'SDK Batiment',
-        },
-    } : null;
-
-    // Breadcrumb Schema
-    const breadcrumbJsonLd = {
-        '@context': 'https://schema.org',
-        '@type': 'BreadcrumbList',
-        itemListElement: [
-            { '@type': 'ListItem', position: 1, name: 'Accueil', item: 'https://sdkbatiment.com' },
-            { '@type': 'ListItem', position: 2, name: 'Réalisations', item: 'https://sdkbatiment.com/realisations' },
-            { '@type': 'ListItem', position: 3, name: project.title, item: `https://sdkbatiment.com/realisations/${project.slug || id}` },
-        ],
-    };
-
-    // FAQ Schema for the Project
-    const faqJsonLd = {
-        '@context': 'https://schema.org',
-        '@type': 'FAQPage',
-        "mainEntity": [
-            {
-                "@type": "Question",
-                "name": `Qui a réalisé le projet ${project.title} ?`,
-                "acceptedAnswer": {
-                    "@type": "Answer",
-                    "text": `Ce projet d'étanchéité a été réalisé avec succès par ${artisanName}, un artisan partenaire qualifié chez SDK Batiment.`
-                }
-            },
-            ...(project.location ? [{
-                "@type": "Question",
-                "name": `Où a été réalisé le projet ${project.title} ?`,
-                "acceptedAnswer": {
-                    "@type": "Answer",
-                    "text": `Ce chantier a été effectué à ${project.location} en utilisant les systèmes professionnels de Horizon Chimique.`
-                }
-            }] : []),
-            {
-                "@type": "Question",
-                "name": `Comment contacter ${artisanName} pour un devis ?`,
-                "acceptedAnswer": {
-                    "@type": "Answer",
-                    "text": `Vous pouvez contacter ${artisanName} via SDK Batiment ou directement sur leur profil artisan pour demander une étude technique et un devis de vos travaux.`
-                }
-            }
-        ]
+            name: project.artisan?.companyName || project.artisan?.name,
+        }
     };
 
     return (
-        <div style={{ minHeight: '100vh', background: '#f0f2f5', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif' }}>
-
-            {/* JSON-LD Structured Data for Google */}
+        <>
             <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
-            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
-            {videoJsonLd && (
-                <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(videoJsonLd) }} />
-            )}
-
-            {/* Top Nav Bar - Back button */}
-            <div style={{ background: '#fff', borderBottom: '1px solid #e4e6ea', position: 'sticky', top: 0, zIndex: 50, padding: '10px 16px' }}>
-                <div style={{ maxWidth: 680, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Link href={`/artisans/${project.artisan.slug || project.artisan._id}`} style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#65676b', fontWeight: 600, fontSize: 14, textDecoration: 'none' }}>
-                        <ArrowLeft size={18} />
-                        Retour au profil de {artisanName}
-                    </Link>
-                    <WhatsAppButton
-                        phone={project.artisan.whatsapp || project.artisan.phone}
-                        label="Contacter"
-                        className="px-4 py-2 rounded-full text-sm font-bold"
-                    />
-                </div>
-            </div>
-
-            {/* Breadcrumbs for SEO */}
-            <nav aria-label="Fil d'Ariane" style={{ maxWidth: 680, margin: '12px auto 0', padding: '0 16px' }}>
-                <ol style={{ display: 'flex', gap: 6, listStyle: 'none', padding: 0, margin: 0, fontSize: 12, color: '#65676b' }}>
-                    <li><Link href="/" style={{ color: '#1877f2', textDecoration: 'none' }}>Accueil</Link></li>
-                    <li>›</li>
-                    <li><Link href="/realisations" style={{ color: '#1877f2', textDecoration: 'none' }}>Réalisations</Link></li>
-                    <li>›</li>
-                    <li style={{ color: '#050505', fontWeight: 500 }}>{project.title}</li>
-                </ol>
-            </nav>
-
-            {/* Facebook-style Feed Container */}
-            <div style={{ maxWidth: 680, margin: '8px auto', padding: '0 0 40px 0' }}>
-
-                {/* Post Card - Using semantic article tag */}
-                <article itemScope itemType="https://schema.org/Article" style={{ background: '#fff', borderRadius: 8, boxShadow: '0 1px 2px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
-
-                    {/* 1. Visuals First (WOW Factor) */}
-                    <ProjectGalleryFB images={project.images} video={project.video} />
-
-                    {/* Shared CTA Component Logic */}
-                    {(() => {
-                        const description = project.description || '';
-                        const paragraphs = description.split('\n');
-                        const isLong = description.length > 500 && paragraphs.length > 3;
-
-                        const DiagnosticCTA = ({ isTop = false, isMiddle = false }) => (
-                            <div style={{ 
-                                margin: isTop ? '16px 16px 8px' : isMiddle ? '16px 0' : '0 16px 16px', 
-                                padding: '16px', 
-                                borderRadius: 12, 
-                                background: isTop ? 'linear-gradient(135deg, #1877f2 0%, #0d47a1 100%)' : 'linear-gradient(135deg, #f0f7ff 0%, #ffffff 100%)', 
-                                border: isTop ? 'none' : '1px solid #e7f3ff', 
-                                color: isTop ? '#fff' : 'inherit',
-                                display: 'flex', 
-                                flexWrap: 'wrap',
-                                alignItems: 'center', 
-                                gap: 12, 
-                                boxShadow: isTop ? '0 4px 12px rgba(24,119,242,0.2)' : '0 2px 8px rgba(24,119,242,0.05)' 
-                            }}>
-                                <div style={{ background: isTop ? 'rgba(255,255,255,0.2)' : '#e7f3ff', padding: 10, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <ClipboardList className={isTop ? 'text-white' : 'text-blue-600'} size={20} />
-                                </div>
-                                <div style={{ flex: '1 1 200px' }}>
-                                    <div style={{ fontSize: 14, fontWeight: 700, color: isTop ? '#fff' : '#050505', marginBottom: 2 }}>Besoin d'un diagnostic ?</div>
-                                    <div style={{ fontSize: 12, color: isTop ? 'rgba(255,255,255,0.9)' : '#65676b' }}>Demandez μια visite technique gratuite.</div>
-                                </div>
-                                <Link href="/?support=diagnostic" style={{ 
-                                    background: isTop ? '#fff' : '#1877f2', 
-                                    color: isTop ? '#1877f2' : '#fff', 
-                                    padding: '10px 18px', 
-                                    borderRadius: 8, 
-                                    fontSize: 13, 
-                                    fontWeight: 700, 
-                                    textDecoration: 'none', 
-                                    textAlign: 'center',
-                                    flex: '1 1 auto',
-                                    minWidth: 'fit-content',
-                                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)' 
-                                }}>
-                                    Demander Diagnostic
-                                </Link>
-                            </div>
-                        );
-
-                        return (
-                            <>
-                                {/* 2. Immediate Top CTA (Conversion Focus) */}
-                                <DiagnosticCTA isTop={true} />
-
-                                {/* 3. Post Header - Author Info */}
-                                <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                        <Link href={`/artisans/${project.artisan.slug || project.artisan._id}`} style={{ textDecoration: 'none', flexShrink: 0 }}>
-                                            <div style={{ width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', background: '#e4e6ea', border: '2px solid #e4e6ea' }}>
-                                                {artisanImage
-                                                    ? <img src={artisanImage} alt={artisanName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                    : <UserCircle size={40} color="#bcc0c4" />
-                                                }
-                                            </div>
-                                        </Link>
-                                        <div>
-                                            <Link href={`/artisans/${project.artisan.slug || project.artisan._id}`} style={{ textDecoration: 'none' }}>
-                                                <span itemProp="author" style={{ fontWeight: 600, fontSize: 15, color: '#050505', lineHeight: 1.2 }}>{artisanName}</span>
-                                            </Link>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
-                                                <time dateTime={project.createdAt} itemProp="datePublished" style={{ fontSize: 12, color: '#65676b' }}>{postDate}</time>
-                                                <span style={{ color: '#65676b', fontSize: 10 }}>·</span>
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="#65676b"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <button style={{ width: 36, height: 36, borderRadius: '50%', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#65676b' }}
-                                        aria-label="Plus d'options">
-                                        <MoreHorizontal size={20} />
-                                    </button>
-                                </header>
-
-                                {/* 4. Post Title + Tags */}
-                                <div style={{ padding: '0 16px 10px' }}>
-                                    <h1 itemProp="headline" style={{ fontSize: 15, color: '#050505', lineHeight: 1.4, fontWeight: 700, margin: 0 }}>
-                                        {project.title}
-                                    </h1>
-                                    {project.location && (
-                                        <div style={{ fontSize: 12, color: '#65676b', marginTop: 4 }}>
-                                            📍 {project.location}
-                                        </div>
-                                    )}
-                                    {project.tags && project.tags.length > 0 && (
-                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 6 }}>
-                                            {project.tags.map(tag => (
-                                                <Link key={tag} href={`/realisations?tag=${encodeURIComponent(tag)}`} style={{ textDecoration: 'none' }}>
-                                                    <span style={{ background: '#e7f3ff', color: '#1877f2', borderRadius: 4, fontSize: 12, fontWeight: 700, padding: '2px 8px', textTransform: 'uppercase' }}>
-                                                        {tag}
-                                                    </span>
-                                                </Link>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* 5. Article Body (Description) */}
-                                {isLong ? (() => {
-                                    const middleIndex = Math.floor(paragraphs.length / 2);
-                                    const topHalf = paragraphs.slice(0, middleIndex).join('\n');
-                                    const bottomHalf = paragraphs.slice(middleIndex).join('\n');
-                                    return (
-                                        <>
-                                            <div itemProp="articleBody" style={{ padding: '0 16px 12px', fontSize: 14, color: '#333', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
-                                                {topHalf}
-                                                <DiagnosticCTA isMiddle={true} />
-                                                {bottomHalf}
-                                            </div>
-                                            <DiagnosticCTA />
-                                        </>
-                                    );
-                                })() : (
-                                    <>
-                                        <div itemProp="articleBody" style={{ padding: '0 16px 12px', fontSize: 14, color: '#333', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
-                                            {description}
-                                        </div>
-                                        <DiagnosticCTA />
-                                    </>
-                                )}
-                            </>
-                        );
-                    })()}
-
-                    {/* Likes Count Bar */}
-
-
-                    {/* Likes Count Bar */}
-                    {likesCount > 0 && (
-                        <div style={{ padding: '8px 16px', borderBottom: '1px solid #e4e6ea', display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <div style={{ width: 18, height: 18, borderRadius: '50%', background: '#1877f2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="white"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></svg>
-                            </div>
-                            <span style={{ fontSize: 13, color: '#65676b' }}>{likesCount} J'aime</span>
-                        </div>
-                    )}
-
-                    {/* Interaction Bar */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', borderBottom: '1px solid #e4e6ea' }}>
-                        <div style={{ display: 'flex', justifyContent: 'center', padding: '4px 0' }}>
-                            <LikeButton realizationId={project._id.toString()} initialLikes={likesCount} initialIsLiked={isLiked} facebookStyle={true} />
-                        </div>
-                        <button style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', padding: '8px 0', fontWeight: 600, fontSize: 13, color: '#65676b', borderRadius: 4 }}>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-                            <span style={{ fontSize: 12 }}>Commenter</span>
-                        </button>
-                        <a
-                            href={formatWhatsAppUrl(project.artisan.whatsapp || project.artisan.phone)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', padding: '8px 0', fontWeight: 600, fontSize: 13, color: '#65676b', textDecoration: 'none', borderRadius: 4 }}
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zm-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884zm8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                            <span style={{ fontSize: 12 }}>Contacter</span>
-                        </a>
-                        <ShareButton url={`https://sdkbatiment.com/realisations/${project.slug || project._id}`} />
-                    </div>
-
-                    {/* Comments Section */}
-                    <div style={{ padding: '0 0 8px 0' }}>
-                        <CommentSection realizationId={project._id.toString()} facebookStyle={true} />
-                    </div>
-                </article>
-
-                {/* Rating Card */}
-                <div style={{ marginTop: 12, background: '#fff', borderRadius: 8, boxShadow: '0 1px 2px rgba(0,0,0,0.1)', padding: '16px' }}>
-                    <ReviewSection artisanId={project.artisan._id.toString()} showList={false} title="Noter l'Artisan sur ce projet" />
-                </div>
-
-            </div>
-        </div>
+            <RealizationClient 
+                project={JSON.parse(JSON.stringify(project))} 
+                userId={userId}
+                isLiked={isLiked}
+                likesCount={likesCount}
+            />
+        </>
     );
 }

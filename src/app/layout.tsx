@@ -69,8 +69,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 t.src=v;s=b.getElementsByTagName(e)[0];
                 s.parentNode.insertBefore(t,s)}(window, document,'script',
                 'https://connect.facebook.net/en_US/fbevents.js');
-                fbq('set', 'autoConfig', false, '${fbPixelId}');
+                fbq('set', 'autoConfig', true, '${fbPixelId}');
                 fbq('init', '${fbPixelId}');
+                fbq('track', 'PageView');
               `,
             }}
           />
