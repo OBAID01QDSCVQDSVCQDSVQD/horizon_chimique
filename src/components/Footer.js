@@ -9,7 +9,7 @@ export default function Footer() {
     const [settings, setSettings] = useState({
         companyName: 'SDK BATIMENT',
         address: 'Tunis, Tunisie',
-        phone: '+216 31 520 033',
+        phone: '+216 53 520 222',
         email: 'contact@sdk-batiment.tn',
         website: 'www.horizon-chimique.tn',
         logoUrl: '/logo.png'

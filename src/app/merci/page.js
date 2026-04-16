@@ -100,8 +100,8 @@ function ThankYouContent() {
                             </div>
                             <div className="text-left">
                                 <p className="text-xs text-slate-500 font-bold uppercase tracking-wide">Besoin urgent ?</p>
-                                <a href="tel:+21631520033" className="text-slate-800 font-bold hover:text-primary transition-colors">
-                                    +216 31 520 033
+                                <a href="tel:+21653520222" className="text-slate-800 font-bold hover:text-primary transition-colors">
+                                    +216 53 520 222
                                 </a>
                             </div>
                         </div>

@@ -15,15 +15,13 @@ export async function GET(request) {
             // Proxy external (e.g. MinIO S3) URLs
             const fetchRes = await fetch(fileUrl);
             if (!fetchRes.ok) throw new Error("Failed to fetch PDF from MinIO/S3");
-            const fileBuffer = await fetchRes.arrayBuffer();
             
-            return new NextResponse(fileBuffer, {
+            return new NextResponse(fetchRes.body, {
                 status: 200,
                 headers: {
                     'Content-Type': 'application/pdf',
-                    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-                    'Pragma': 'no-cache',
-                    'Expires': '0',
+                    'Content-Length': fetchRes.headers.get('Content-Length'),
+                    'Cache-Control': 'public, max-age=31536000, immutable',
                 }
             });
         } else {
