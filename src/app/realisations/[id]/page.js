@@ -284,131 +284,139 @@ export default async function PublicRealizationDetail({ params }) {
                 {/* Post Card - Using semantic article tag */}
                 <article itemScope itemType="https://schema.org/Article" style={{ background: '#fff', borderRadius: 8, boxShadow: '0 1px 2px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
 
-                    {/* Post Header - Author Info */}
-                    <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <Link href={`/artisans/${project.artisan.slug || project.artisan._id}`} style={{ textDecoration: 'none', flexShrink: 0 }}>
-                                <div style={{ width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', background: '#e4e6ea', border: '2px solid #e4e6ea' }}>
-                                    {artisanImage
-                                        ? <img src={artisanImage} alt={artisanName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                        : <UserCircle size={40} color="#bcc0c4" />
-                                    }
-                                </div>
-                            </Link>
-                            <div>
-                                <Link href={`/artisans/${project.artisan.slug || project.artisan._id}`} style={{ textDecoration: 'none' }}>
-                                    <span itemProp="author" style={{ fontWeight: 600, fontSize: 15, color: '#050505', lineHeight: 1.2 }}>{artisanName}</span>
-                                </Link>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
-                                    <time dateTime={project.createdAt} itemProp="datePublished" style={{ fontSize: 12, color: '#65676b' }}>{postDate}</time>
-                                    <span style={{ color: '#65676b', fontSize: 10 }}>·</span>
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="#65676b"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
-                                </div>
-                            </div>
-                        </div>
-                        <button style={{ width: 36, height: 36, borderRadius: '50%', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#65676b' }}
-                            aria-label="Plus d'options">
-                            <MoreHorizontal size={20} />
-                        </button>
-                    </header>
+                    {/* 1. Visuals First (WOW Factor) */}
+                    <ProjectGalleryFB images={project.images} video={project.video} />
 
-                    {/* Post Title + Tags - Using semantic h1 */}
-                    <div style={{ padding: '0 16px 10px' }}>
-                        <h1 itemProp="headline" style={{ fontSize: 15, color: '#050505', lineHeight: 1.4, fontWeight: 700, margin: 0 }}>
-                            {project.title}
-                        </h1>
-                        {project.location && (
-                            <div style={{ fontSize: 12, color: '#65676b', marginTop: 4 }}>
-                                📍 {project.location}
-                            </div>
-                        )}
-                        {project.tags && project.tags.length > 0 && (
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 6 }}>
-                                {project.tags.map(tag => (
-                                    <Link key={tag} href={`/realisations?tag=${encodeURIComponent(tag)}`} style={{ textDecoration: 'none' }}>
-                                        <span style={{ background: '#e7f3ff', color: '#1877f2', borderRadius: 4, fontSize: 12, fontWeight: 700, padding: '2px 8px', textTransform: 'uppercase' }}>
-                                            {tag}
-                                        </span>
-                                    </Link>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Post Text Content with Smart CTA Injection */}
-                    {project.description && (() => {
-                        const description = project.description;
+                    {/* Shared CTA Component Logic */}
+                    {(() => {
+                        const description = project.description || '';
                         const paragraphs = description.split('\n');
                         const isLong = description.length > 500 && paragraphs.length > 3;
 
-                        // Reusable CTA Component
-                        const DiagnosticCTA = ({ isMiddle = false }) => (
+                        const DiagnosticCTA = ({ isTop = false, isMiddle = false }) => (
                             <div style={{ 
-                                margin: isMiddle ? '16px 0' : '0 16px 16px', 
+                                margin: isTop ? '16px 16px 8px' : isMiddle ? '16px 0' : '0 16px 16px', 
                                 padding: '16px', 
                                 borderRadius: 12, 
-                                background: 'linear-gradient(135deg, #f0f7ff 0%, #ffffff 100%)', 
-                                border: '1px solid #e7f3ff', 
+                                background: isTop ? 'linear-gradient(135deg, #1877f2 0%, #0d47a1 100%)' : 'linear-gradient(135deg, #f0f7ff 0%, #ffffff 100%)', 
+                                border: isTop ? 'none' : '1px solid #e7f3ff', 
+                                color: isTop ? '#fff' : 'inherit',
                                 display: 'flex', 
                                 flexWrap: 'wrap',
                                 alignItems: 'center', 
                                 gap: 12, 
-                                boxShadow: '0 2px 8px rgba(24,119,242,0.05)' 
+                                boxShadow: isTop ? '0 4px 12px rgba(24,119,242,0.2)' : '0 2px 8px rgba(24,119,242,0.05)' 
                             }}>
-                                <div style={{ background: '#e7f3ff', padding: 10, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <ClipboardList className="text-blue-600" size={20} />
+                                <div style={{ background: isTop ? 'rgba(255,255,255,0.2)' : '#e7f3ff', padding: 10, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <ClipboardList className={isTop ? 'text-white' : 'text-blue-600'} size={20} />
                                 </div>
                                 <div style={{ flex: '1 1 200px' }}>
-                                    <div style={{ fontSize: 14, fontWeight: 700, color: '#050505', marginBottom: 2 }}>Besoin d'un diagnostic ?</div>
-                                    <div style={{ fontSize: 12, color: '#65676b' }}>Demandez une visite technique gratuite pour votre projet.</div>
+                                    <div style={{ fontSize: 14, fontWeight: 700, color: isTop ? '#fff' : '#050505', marginBottom: 2 }}>Besoin d'un diagnostic ?</div>
+                                    <div style={{ fontSize: 12, color: isTop ? 'rgba(255,255,255,0.9)' : '#65676b' }}>Demandez μια visite technique gratuite.</div>
                                 </div>
                                 <Link href="/?support=diagnostic" style={{ 
-                                    background: '#1877f2', 
-                                    color: '#fff', 
+                                    background: isTop ? '#fff' : '#1877f2', 
+                                    color: isTop ? '#1877f2' : '#fff', 
                                     padding: '10px 18px', 
                                     borderRadius: 8, 
                                     fontSize: 13, 
-                                    fontWeight: 600, 
+                                    fontWeight: 700, 
                                     textDecoration: 'none', 
                                     textAlign: 'center',
                                     flex: '1 1 auto',
                                     minWidth: 'fit-content',
-                                    boxShadow: '0 2px 4px rgba(24,119,242,0.2)' 
+                                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)' 
                                 }}>
                                     Demander Diagnostic
                                 </Link>
                             </div>
                         );
 
-                        if (isLong) {
-                            const middleIndex = Math.floor(paragraphs.length / 2);
-                            const topHalf = paragraphs.slice(0, middleIndex).join('\n');
-                            const bottomHalf = paragraphs.slice(middleIndex).join('\n');
-
-                            return (
-                                <>
-                                    <div itemProp="articleBody" style={{ padding: '0 16px 12px', fontSize: 14, color: '#333', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
-                                        {topHalf}
-                                        <DiagnosticCTA isMiddle={true} />
-                                        {bottomHalf}
-                                    </div>
-                                    <DiagnosticCTA />
-                                </>
-                            );
-                        }
-
                         return (
                             <>
-                                <div itemProp="articleBody" style={{ padding: '0 16px 12px', fontSize: 14, color: '#333', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
-                                    {description}
+                                {/* 2. Immediate Top CTA (Conversion Focus) */}
+                                <DiagnosticCTA isTop={true} />
+
+                                {/* 3. Post Header - Author Info */}
+                                <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                        <Link href={`/artisans/${project.artisan.slug || project.artisan._id}`} style={{ textDecoration: 'none', flexShrink: 0 }}>
+                                            <div style={{ width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', background: '#e4e6ea', border: '2px solid #e4e6ea' }}>
+                                                {artisanImage
+                                                    ? <img src={artisanImage} alt={artisanName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                    : <UserCircle size={40} color="#bcc0c4" />
+                                                }
+                                            </div>
+                                        </Link>
+                                        <div>
+                                            <Link href={`/artisans/${project.artisan.slug || project.artisan._id}`} style={{ textDecoration: 'none' }}>
+                                                <span itemProp="author" style={{ fontWeight: 600, fontSize: 15, color: '#050505', lineHeight: 1.2 }}>{artisanName}</span>
+                                            </Link>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                                                <time dateTime={project.createdAt} itemProp="datePublished" style={{ fontSize: 12, color: '#65676b' }}>{postDate}</time>
+                                                <span style={{ color: '#65676b', fontSize: 10 }}>·</span>
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="#65676b"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button style={{ width: 36, height: 36, borderRadius: '50%', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#65676b' }}
+                                        aria-label="Plus d'options">
+                                        <MoreHorizontal size={20} />
+                                    </button>
+                                </header>
+
+                                {/* 4. Post Title + Tags */}
+                                <div style={{ padding: '0 16px 10px' }}>
+                                    <h1 itemProp="headline" style={{ fontSize: 15, color: '#050505', lineHeight: 1.4, fontWeight: 700, margin: 0 }}>
+                                        {project.title}
+                                    </h1>
+                                    {project.location && (
+                                        <div style={{ fontSize: 12, color: '#65676b', marginTop: 4 }}>
+                                            📍 {project.location}
+                                        </div>
+                                    )}
+                                    {project.tags && project.tags.length > 0 && (
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 6 }}>
+                                            {project.tags.map(tag => (
+                                                <Link key={tag} href={`/realisations?tag=${encodeURIComponent(tag)}`} style={{ textDecoration: 'none' }}>
+                                                    <span style={{ background: '#e7f3ff', color: '#1877f2', borderRadius: 4, fontSize: 12, fontWeight: 700, padding: '2px 8px', textTransform: 'uppercase' }}>
+                                                        {tag}
+                                                    </span>
+                                                </Link>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
-                                <DiagnosticCTA />
+
+                                {/* 5. Article Body (Description) */}
+                                {isLong ? (() => {
+                                    const middleIndex = Math.floor(paragraphs.length / 2);
+                                    const topHalf = paragraphs.slice(0, middleIndex).join('\n');
+                                    const bottomHalf = paragraphs.slice(middleIndex).join('\n');
+                                    return (
+                                        <>
+                                            <div itemProp="articleBody" style={{ padding: '0 16px 12px', fontSize: 14, color: '#333', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
+                                                {topHalf}
+                                                <DiagnosticCTA isMiddle={true} />
+                                                {bottomHalf}
+                                            </div>
+                                            <DiagnosticCTA />
+                                        </>
+                                    );
+                                })() : (
+                                    <>
+                                        <div itemProp="articleBody" style={{ padding: '0 16px 12px', fontSize: 14, color: '#333', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
+                                            {description}
+                                        </div>
+                                        <DiagnosticCTA />
+                                    </>
+                                )}
                             </>
                         );
                     })()}
 
-                    {/* Facebook-Style Image Grid */}
-                    <ProjectGalleryFB images={project.images} video={project.video} />
+                    {/* Likes Count Bar */}
+
 
                     {/* Likes Count Bar */}
                     {likesCount > 0 && (
