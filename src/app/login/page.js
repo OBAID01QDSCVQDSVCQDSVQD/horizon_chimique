@@ -291,17 +291,17 @@ export default function LoginPage() {
                                                 />
                                                 <button type="button" onClick={() => setShowOtpInput(false)} className="text-xs text-primary font-bold mt-4 block mx-auto underline">Modifier le numéro</button>
                                             </div>
-
-                                            {/* SMS/Global Turnstile */}
-                                            <div className="flex justify-center py-2">
-                                                <Turnstile
-                                                    siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || process.env.NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY}
-                                                    onSuccess={(token) => setTurnstileToken(token)}
-                                                    options={{ theme: 'light' }}
-                                                />
-                                            </div>
                                         </div>
                                     )}
+
+                                    {/* SMS Turnstile (Always visible for SMS method) */}
+                                    <div className="flex justify-center pt-6 pb-2">
+                                        <Turnstile
+                                            siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || process.env.NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY}
+                                            onSuccess={(token) => setTurnstileToken(token)}
+                                            options={{ theme: 'light' }}
+                                        />
+                                    </div>
                                 </div>
                             )}
 
