@@ -6,10 +6,10 @@ export async function POST(req) {
     try {
         const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || '127.0.0.1';
         
-        // Rate limit: 10 uploads per 15 minutes
-        const { success } = await rateLimit(`upload_${ip}`, 10, 900);
+        // Rate limit: 100 uploads per 15 minutes (Artisans need more for projects with many photos)
+        const { success } = await rateLimit(`upload_${ip}`, 100, 900);
         if (!success) {
-            return NextResponse.json({ success: false, error: "Trop d'uploads. Veuillez patienter 15 minutes." }, { status: 429 });
+            return NextResponse.json({ success: false, error: "Trop d'uploads (Limite 100/15min). Veuillez patienter." }, { status: 429 });
         }
 
         const data = await req.formData();
