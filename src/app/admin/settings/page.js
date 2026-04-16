@@ -246,7 +246,8 @@ export default function SettingsPage() {
                 throw new Error(data.error);
             }
         } catch (error) {
-            toast.error("Erreur de sauvegarde");
+            console.error('Settings Save Error:', error);
+            toast.error(error.message || "Erreur de sauvegarde", { duration: 5000 });
         } finally {
             setSubmitting(false);
         }
