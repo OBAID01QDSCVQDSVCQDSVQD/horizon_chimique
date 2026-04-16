@@ -4,12 +4,12 @@ import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { Loader2, AlertCircle, BookOpen } from 'lucide-react';
 
-const PDFViewer = dynamic(() => import('@/components/PDFViewer'), {
+const ImageCatalog = dynamic(() => import('@/components/ImageCatalog'), {
   ssr: false,
   loading: () => (
     <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 text-slate-500">
       <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
-      <p className="text-sm font-medium">Chargement du lecteur (page par page)…</p>
+      <p className="text-sm font-medium">Chargement du visualiseur haute qualité...</p>
     </div>
   ),
 });
@@ -71,9 +71,9 @@ export default function CatalogClient({ initialCatalogUrl }) {
         <div className="w-full">
             <div className="mb-4 flex items-center gap-2 text-slate-400 text-xs font-semibold uppercase tracking-wider">
                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                Lecture interactive disponbile
+                Catalogue Interactif HD - 32 Pages
             </div>
-            <PDFViewer url={catalogUrl} />
+            <ImageCatalog downloadUrl={catalogUrl} />
         </div>
       ) : (
         <div className="text-center max-w-md mx-auto bg-white p-10 rounded-2xl shadow-sm border border-slate-100 my-12">
