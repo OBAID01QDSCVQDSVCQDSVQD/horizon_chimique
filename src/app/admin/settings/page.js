@@ -244,8 +244,8 @@ export default function SettingsPage() {
             const contentType = res.headers.get("content-type");
             if (!contentType || !contentType.includes("application/json")) {
                 const text = await res.text();
-                console.error('Server returned non-JSON:', text.substring(0, 200));
-                throw new Error("Le serveur a renvoyé une réponse invalide (HTML). Veuillez vérifier votre connexion ou vous reconnecter.");
+                const snippet = text.substring(0, 80).replace(/<[^>]*>?/gm, '').trim();
+                throw new Error(`Serrveur Error (${res.status}): ${snippet}...`);
             }
 
             const data = await res.json();
