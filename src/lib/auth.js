@@ -18,13 +18,13 @@ export const verifyTurnstile = async (token) => {
     if (!secretKey) return true; // Skip if no secret key configured
 
     try {
+        const formData = new URLSearchParams();
+        formData.append('secret', secretKey);
+        formData.append('response', token);
+
         const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                secret: secretKey,
-                response: token
-            })
+            body: formData
         });
         const data = await res.json();
         return data.success;
