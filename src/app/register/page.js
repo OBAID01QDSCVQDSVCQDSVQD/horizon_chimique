@@ -300,13 +300,15 @@ export default function RegisterPage() {
                         )}
 
                         {/* Turnstile Protection */}
-                        <div className="flex justify-center py-2">
-                            <Turnstile
-                                siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || process.env.NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY}
-                                onSuccess={(token) => setTurnstileToken(token)}
-                                options={{ theme: 'light' }}
-                            />
-                        </div>
+                        {(!showOtpInput || role === 'artisan') && (
+                            <div className="flex justify-center py-2 animate-in fade-in zoom-in-95 duration-300">
+                                <Turnstile
+                                    siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || process.env.NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY}
+                                    onSuccess={(token) => setTurnstileToken(token)}
+                                    options={{ theme: 'light' }}
+                                />
+                            </div>
+                        )}
 
                         <button
                             type="submit"

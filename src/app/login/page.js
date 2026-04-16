@@ -294,14 +294,16 @@ export default function LoginPage() {
                                         </div>
                                     )}
 
-                                    {/* SMS Turnstile (Always visible for SMS method) */}
-                                    <div className="flex justify-center pt-6 pb-2">
-                                        <Turnstile
-                                            siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || process.env.NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY}
-                                            onSuccess={(token) => setTurnstileToken(token)}
-                                            options={{ theme: 'light' }}
-                                        />
-                                    </div>
+                                    {/* SMS Turnstile (Only visible before sending SMS) */}
+                                    {!showOtpInput && (
+                                        <div className="flex justify-center pt-6 pb-2">
+                                            <Turnstile
+                                                siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || process.env.NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY}
+                                                onSuccess={(token) => setTurnstileToken(token)}
+                                                options={{ theme: 'light' }}
+                                            />
+                                        </div>
+                                    )}
                                 </div>
                             )}
 

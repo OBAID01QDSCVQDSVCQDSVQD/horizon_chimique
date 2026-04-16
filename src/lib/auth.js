@@ -49,11 +49,13 @@ export const authOptions = {
                 try {
                     const { identifier, password, otp, phone: phoneCred, turnstileToken } = credentials;
 
-                    // 1. Verify Turnstile (Strict Blocking)
-                    const isHuman = await verifyTurnstile(turnstileToken);
-                    if (!isHuman) {
-                        console.error("❌ Bot Detected - Login Blocked");
-                        throw new Error("Échec de la vérification Anti-Bot. Accès refusé.");
+                    // 1. Verify Turnstile (Strict Blocking) - SKIP if OTP is provided as it was verified during send-SMS
+                    if (!otp) {
+                        const isHuman = await verifyTurnstile(turnstileToken);
+                        if (!isHuman) {
+                            console.error("❌ Bot Detected - Login Blocked");
+                            throw new Error("Échec de la vérification Anti-Bot. Accès refusé.");
+                        }
                     }
 
                     // Case 4: Local SMS OTP (WinSMS.tn)

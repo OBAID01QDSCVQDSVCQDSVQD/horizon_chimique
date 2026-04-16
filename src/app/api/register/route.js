@@ -18,23 +18,25 @@ export async function POST(req) {
         const body = await req.json();
         const { name, identifier, email: reqEmail, phone: reqPhone, password, role, specialty, otp, turnstileToken } = body;
 
-        // 2. Turnstile Verification
-        const secretKey = process.env.TURNSTILE_SECRET_KEY || process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY;
-        if (secretKey && turnstileToken) {
-            const verifyRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    secret: secretKey,
-                    response: turnstileToken,
-                    remoteip: ip
-                })
-            });
-            const verifyJson = await verifyRes.json();
-            
-            if (!verifyJson.success) {
-                console.error("❌ Bot Detected - Registration Blocked:", verifyJson['error-codes']);
-                return NextResponse.json({ success: false, error: "Échec de la vérification Anti-Bot. Accès refusé." }, { status: 403 });
+        // 2. Turnstile Verification (Skip if OTP is provided since it was verified during Send-SMS)
+        if (!otp) {
+            const secretKey = process.env.TURNSTILE_SECRET_KEY || process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY;
+            if (secretKey && turnstileToken) {
+                const verifyRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        secret: secretKey,
+                        response: turnstileToken,
+                        remoteip: ip
+                    })
+                });
+                const verifyJson = await verifyRes.json();
+                
+                if (!verifyJson.success) {
+                    console.error("❌ Bot Detected - Registration Blocked:", verifyJson['error-codes']);
+                    return NextResponse.json({ success: false, error: "Échec de la vérification Anti-Bot. Accès refusé." }, { status: 403 });
+                }
             }
         }
 
