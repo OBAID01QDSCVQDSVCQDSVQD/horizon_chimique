@@ -239,11 +239,20 @@ export default function SettingsPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData)
             });
+
+            // Handle non-JSON responses (like redirects to login or HTML error pages)
+            const contentType = res.headers.get("content-type");
+            if (!contentType || !contentType.includes("application/json")) {
+                const text = await res.text();
+                console.error('Server returned non-JSON:', text.substring(0, 200));
+                throw new Error("Le serveur a renvoyé une réponse invalide (HTML). Veuillez vérifier votre connexion ou vous reconnecter.");
+            }
+
             const data = await res.json();
             if (data.success) {
                 toast.success("Paramètres enregistrés avec succès !");
             } else {
-                throw new Error(data.error);
+                throw new Error(data.error || "Une erreur est survenue lors de la sauvegarde.");
             }
         } catch (error) {
             console.error('Settings Save Error:', error);
