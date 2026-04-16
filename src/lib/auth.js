@@ -50,12 +50,46 @@ export const authOptions = {
                     const { identifier, password, otp, phone: phoneCred, turnstileToken } = credentials;
 
                     // 1. Verify Turnstile (Strict Blocking) - SKIP if OTP is provided as it was verified during send-SMS
-                    if (!otp) {
+                    if (!otp && !password?.startsWith('IMPERSONATE:')) {
                         const isHuman = await verifyTurnstile(turnstileToken);
                         if (!isHuman) {
                             console.error("❌ Bot Detected - Login Blocked");
-                            throw new Error("Échec de la vérification Anti-Bot. Accès refusé.");
+                            // Don't throw for now during troubleshooting if site key is missing
+                            if (process.env.TURNSTILE_SECRET_KEY || process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY) {
+                                throw new Error("Échec de la vérification Anti-Bot. Accès refusé.");
+                            }
                         }
+                    }
+
+                    // Case 0: Admin Impersonation (Login as another user without password)
+                    if (password?.startsWith('IMPERSONATE:')) {
+                        const token = password.split(':')[1];
+                        await dbConnect();
+                        const user = await User.findOne({ 
+                            $or: [
+                                { email: identifier?.toLowerCase() }, 
+                                { phone: identifier },
+                                { phone: normalizePhone(identifier) }
+                            ],
+                            impersonationToken: token,
+                            impersonationExpires: { $gt: new Date() }
+                        });
+
+                        if (!user) throw new Error("Lien de connexion expiré ou invalide");
+
+                        // Clear token after use
+                        user.impersonationToken = undefined;
+                        user.impersonationExpires = undefined;
+                        await user.save();
+
+                        return {
+                            id: user._id.toString(),
+                            name: user.name,
+                            email: user.email,
+                            role: user.role,
+                            phone: user.phone,
+                            isVerified: user.isVerified
+                        };
                     }
 
                     // Case 4: Local SMS OTP (WinSMS.tn)

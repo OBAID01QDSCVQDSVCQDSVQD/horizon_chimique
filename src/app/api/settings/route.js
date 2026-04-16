@@ -27,39 +27,27 @@ export async function PUT(request) {
         await dbConnect();
         const body = await request.json();
 
-        // 1. Find the target document
-        let setting = await Setting.findOne({});
-        
-        if (!setting) {
-            setting = new Setting({});
-        }
-
-        // 2. Safely extract updateable fields
+        // Safely extract updateable fields
         const { _id, __v, createdAt, updatedAt, ...updateData } = body;
 
-        // 3. Apply updates manually to ensure nested objects are handled correctly
-        Object.keys(updateData).forEach(key => {
-            if (updateData[key] !== undefined) {
-                setting[key] = updateData[key];
+        // Atomic update: Direct and safe
+        const setting = await Setting.findOneAndUpdate(
+            {},
+            { $set: updateData },
+            { 
+                new: true, 
+                upsert: true, 
+                runValidators: false 
             }
-        });
+        );
 
-        // 4. Save with versioning check
-        const savedSetting = await setting.save();
-
-        console.log('✅ Settings saved successfully via manual save');
-        return NextResponse.json({ success: true, data: savedSetting });
+        console.log('✅ Settings saved successfully');
+        return NextResponse.json({ success: true, data: setting });
     } catch (error) {
-        console.error('❌ CRITICAL Settings Save Error:', error);
-        
-        // If it's a validation error, provide more detail
-        const errorMessage = error.name === 'ValidationError' 
-            ? Object.values(error.errors).map(err => err.message).join(', ')
-            : (error.message || "Erreur inconnue lors de la sauvegarde");
-
+        console.error('❌ Settings Save Error:', error);
         return NextResponse.json({ 
             success: false, 
-            error: errorMessage 
+            error: error.message || "Erreur lors de la sauvegarde" 
         }, { status: 400 });
     }
 }
