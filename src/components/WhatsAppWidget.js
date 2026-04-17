@@ -19,7 +19,7 @@ function WhatsAppBusinessIcon({ size = 32 }) {
 const AGENTS = [
     {
         id: 1,
-        name: "Service Client",
+        name: "SDK Bâtiment Support",
         role: "Support & Assistance",
         phone: "53520222",
         image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix&backgroundColor=b6e3f4",
@@ -48,7 +48,7 @@ export default function WhatsAppWidget() {
     };
 
     return (
-        <div className="fixed bottom-[180px] lg:bottom-40 right-6 z-[9999] flex flex-col items-end pointer-events-none">
+        <div className="fixed bottom-24 lg:bottom-10 right-6 z-[9999] flex flex-col items-end pointer-events-none">
             {/* Popup Window */}
             {isOpen && (
                 <div className="mb-4 w-[320px] bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-100 flex flex-col animate-in slide-in-from-bottom-5 duration-300 pointer-events-auto">

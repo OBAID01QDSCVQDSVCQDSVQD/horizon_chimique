@@ -86,37 +86,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             />
           </noscript>
         )}
-        <Script
-          id="chatwoot-init"
-          strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function(d,t) {
-                var BASE_URL="https://chat.sdkbatiment.com";
-                var g=d.createElement(t),s=d.getElementsByTagName(t)[0];
-                g.src=BASE_URL+"/packs/js/sdk.js";
-                g.defer = true;
-                g.async = true;
-                s.parentNode.insertBefore(g,s);
-                window.chatwootSettings = {
-                  position: 'right',
-                  type: 'standard', // Use standard to keep it cleaner
-                  launcherTitle: 'Aide',
-                  darkMode: 'auto',
-                  useBrowserHistory: false,
-                  showPopout: false,
-                };
-                g.onload=function(){
-                  window.chatwootSDK.run({
-                    websiteToken: 'PVrE9CEmECNbbhmwJv9LiBfo',
-                    baseUrl: BASE_URL,
-                  })
-                }
-              })(document,"script");
-
-            `
-          }}
-        />
 
         {/* Umami Analytics */}
         <Script

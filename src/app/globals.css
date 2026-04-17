@@ -6,36 +6,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Chatwoot Widget Custom Positioning */
-.woot-widget-bubble { 
-  bottom: 95px !important; 
-  right: 25px !important; 
-}
-.woot-widget-holder { 
-  bottom: 155px !important; 
-  right: 25px !important; 
-}
-.woot-widget-inner {
-  bottom: 0px !important; /* إعادة تصفيرها لأن الـ Holder هو الذي سيتحكم في الارتفاع */
-}
-
-
-/* Chatwoot Branding Final Hide - SDK Batiment Solution */
-span[data-v-448a7326], 
-.chatwoot--powered-by,
-.powered-by-text,
-a[href*="utm_source=widget_branding"] {
-  display: none !important;
-  visibility: hidden !important;
-  pointer-events: none !important;
-}
-
-
-/* Specific selector for iframe internal elements visibility */
-iframe#chatwoot_live_chat_widget_content .branding,
-iframe#chatwoot_live_chat_widget_content span[data-v-448a7326] {
-  display: none !important;
-}
 
 
 
